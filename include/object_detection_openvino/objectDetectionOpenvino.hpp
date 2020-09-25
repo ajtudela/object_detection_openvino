@@ -24,11 +24,8 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
-//#include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
-//#include <object_detection_openvino/BoundingBox.h>
 #include <object_detection_openvino/BoundingBoxArray.h>
-//#include <object_detection_openvino/BoundingBox3d.h>
 #include <object_detection_openvino/BoundingBox3dArray.h>
 
 // OpenCv
@@ -88,8 +85,9 @@ class ObjectDetectionOpenvino{
 		int detectionId_;
 		float thresh_, iouThresh_;
 		bool showFPS_, outputImage_, outputBoxes_, outputMarkers_;
-
-		InferenceEngine::InferRequest::Ptr async_infer_request_curr_;
+		
+		cv::Mat nextFrame_, currFrame_;
+		InferenceEngine::InferRequest::Ptr async_infer_request_curr_, async_infer_request_next_;
 		InferenceEngine::OutputsDataMap outputInfo_;
 		InferenceEngine::InputsDataMap inputInfo_;
 		InferenceEngine::CNNNetReader netReader_;

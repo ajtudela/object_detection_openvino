@@ -88,8 +88,8 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	ROS_INFO("[ObjectDetectionOpenvino] Checking that the outputs are as expected");
 	outputInfo_ = OutputsDataMap(netReader_.getNetwork().getOutputsInfo());
 	if(networkType_ == "YOLO"){
-		if (outputInfo_.size() != 3) {
-			throw std::logic_error("Only accepts networks with three output");
+		if (outputInfo_.size() != 3 && outputInfo_.size() != 2) {
+			throw std::logic_error("Only accepts networks with three (YOLO) or two (tiny-YOLO) outputs");
 		}
 	}else if(networkType_ == "SSD"){
 		if (outputInfo_.size() != 1) {
@@ -108,6 +108,7 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	// Create inference requset
 	ROS_INFO("[ObjectDetectionOpenvino] Create infer request");
 	async_infer_request_curr_ = network.CreateInferRequestPtr();
+	async_infer_request_next_ = network.CreateInferRequestPtr();
 }
 
 /* Delete all parameteres */
@@ -420,13 +421,15 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 	depthFrameId_ = depthImageMsg->header.frame_id;
 
 	// Copy data from image to input blob
-	cv::Mat frame = colorFrame->image.clone();
-	Blob::Ptr frameBlob = async_infer_request_curr_->GetBlob(inputName_);
-	matU8ToBlob<uint8_t>(frame, frameBlob);
+	nextFrame_ = colorFrame->image.clone();
+	Blob::Ptr frameBlob = async_infer_request_next_->GetBlob(inputName_);
+	matU8ToBlob<uint8_t>(nextFrame_, frameBlob);
 
 	// Load network
 	auto t0 = std::chrono::high_resolution_clock::now();
-	async_infer_request_curr_->StartAsync();
+	
+	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
+	async_infer_request_next_->StartAsync();
 
 	// Delete marker array
 	boxMarkerArray.markers.clear();
@@ -442,17 +445,17 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 			wallclock = t0;
 		
 			std::ostringstream out;
-			cv::putText(frame, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
+			cv::putText(currFrame_, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
 			out.str("");
 			out << "Wallclock time ";
 			out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
-			cv::putText(frame, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+			cv::putText(currFrame_, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 			
 			out.str("");
 			out << "Detection time  : " << std::fixed << std::setprecision(2) << detection.count()
 				<< " ms ("
 				<< 1000.f / detection.count() << " fps)";
-			cv::putText(frame, out.str(), cv::Point2f(0, 75), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
+			cv::putText(currFrame_, out.str(), cv::Point2f(0, 75), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
 		}
 
 		// Processing output blobs
@@ -530,9 +533,9 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 				conf << ":" << std::fixed << std::setprecision(3) << confidence;
 				std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
 				
-				cv::rectangle(frame, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
-				cv::putText(frame, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
-				cv::rectangle(frame, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
+				cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
+				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
+				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
 			}
 			
 			// Markers 
@@ -563,12 +566,17 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 	}
 	
 	// Publish
-	if(outputImage_) publishImage(frame);
+	if(outputImage_) publishImage(currFrame_);
 	if(outputBoxes_){
 		boundingBoxesPublisher_.publish(boundingBoxes);
 		boundingBoxes3dPublisher_.publish(boundingBoxes3d);
 	}
 	if(outputMarkers_) markerPublisher_.publish(boxMarkerArray);
+	
+	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
+	currFrame_ = nextFrame_;
+	nextFrame_ = cv::Mat();
+	async_infer_request_curr_.swap(async_infer_request_next_);
 	
 	return;
 }
