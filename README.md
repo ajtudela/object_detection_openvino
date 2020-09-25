@@ -35,7 +35,7 @@ Parameters
   Filepath to the network labels file.
  * ```~model_type```
   [std::string, default:YOLO]
-  Network type. cAn be YOLO or SSD.
+  Network type. Can be YOLO or SSD.
  * ```~device_target```
   [std::string, default:CPU]
   Device target. Can be CPU, GPU or a MYRIAD device.
