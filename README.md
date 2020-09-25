@@ -1,7 +1,10 @@
 object_detection_openvino
 ========================
 
-An implementation of YOLO and Mobilenet-SSD object detection with a ROS interface and enhanced processor utilization (40-20 fps) using OpenVINO model optimization tools. A depth camera is needed to perform 3d coordinates extraction.
+An implementation of YOLO and Mobilenet-SSD object detection with a ROS interface and enhanced processor utilization (40-20 fps) using OpenVINO model optimization tools. 
+A depth camera is needed to perform 3d coordinates extraction.
+
+The work is based on [this](https://github.com/PINTO0309/OpenVINO-YoloV3).
 
 Usage
 =====
