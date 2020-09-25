@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+		<arg name="align_depth" 		value="true"/>
+		<arg name="enable_fisheye"		value="false"/>
+		<arg name="enable_infra1"		value="false"/>
+		<arg name="enable_infra2"		value="false"/>
+		<arg name="enable_gyro"			value="false"/>
+		<arg name="enable_accel"		value="false"/>
+		<arg name="filters"				value="decimation,temporal"/>
+	</include>
+
+	<node pkg="object_detection_openvino" type="object_detection_openvino" name="object_detection_openvino" output="screen">
+		<param name="color_topic"			value="/camera/color/image_raw"/>
+		<param name="depth_topic"			value="/camera/aligned_depth_to_color/image_raw"/>
+		<param name="info_topic"			value="/camera/aligned_depth_to_color/camera_info"/>
+		<param name="model_thresh"			value="0.4"/>
+		<param name="model_iou_thresh"		value="0.4"/>
+		<param name="model_xml"				value="$(find object_detection_openvino)/models/tiny-YoloV3/FP32/frozen_tiny_yolo_v3.xml"/>
+		<param name="model_bin"				value="$(find object_detection_openvino)/models/tiny-YoloV3/FP32/frozen_tiny_yolo_v3.bin"/>
+		<param name="model_labels"			value="$(find object_detection_openvino)/models/tiny-YoloV3/FP32/frozen_tiny_yolo_v3.labels"/>
+		<param name="model_type"			value="YOLO"/>
+		<param name="device_target"			value="CPU"/>
+		<param name="show_fps"				value="true"/>
+		<param name="output_image"			value="true"/>
+		<param name="output_boxes"			value="true"/>
+		<param name="output_markers"		value="true"/>
+	</node>
+</launch>
+
