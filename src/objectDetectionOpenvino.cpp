@@ -442,9 +442,6 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
 	async_infer_request_next_->StartAsync();
 
-	// Delete marker array
-	boxMarkerArray.markers.clear();
-
 	if (OK == async_infer_request_curr_->Wait(IInferRequest::WaitMode::RESULT_READY)) {
 		// Show FPS
 		if (showFPS_ && outputImage_){
@@ -498,12 +495,12 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 
 		// Format results
 		if(outputBoxes_){
-			boundingBoxes.header.stamp = ros::Time::now();
 			boundingBoxes.header.frame_id = colorFrameId_;
+			boundingBoxes.header.stamp = ros::Time::now();
 			boundingBoxes.image_header = imageHeader_;
 			
-			boundingBoxes3d.header.stamp = ros::Time::now();
 			boundingBoxes3d.header.frame_id = colorFrameId_;
+			boundingBoxes3d.header.stamp = ros::Time::now();
 			boundingBoxes3d.image_header = imageHeader_;
 		}
 		
@@ -588,6 +585,9 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 	currFrame_ = nextFrame_;
 	nextFrame_ = cv::Mat();
 	async_infer_request_curr_.swap(async_infer_request_next_);
+	
+	// Delete marker array
+	boxMarkerArray.markers.clear();
 	
 	return;
 }
