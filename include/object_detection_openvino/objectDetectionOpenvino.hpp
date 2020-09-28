@@ -1,3 +1,17 @@
+/*
+ * OBJECT DETECTION OPENVINO ROS NODE
+ *
+ * Copyright (c) 2020 Alberto José Tudela Roldán <ajtudela@gmail.com>
+ * 
+ * This file is part of object_detection_openvino project.
+ * 
+ * All rights reserved.
+ *
+ */
+
+#ifndef OBJECT_DETECTION_OPENVINO_H
+#define OBJECT_DETECTION_OPENVINO_H
+
 // C++
 #include <math.h>
 #include <functional>
@@ -108,3 +122,4 @@ class ObjectDetectionOpenvino{
 		void publishImage(cv::Mat image);
 		void publishBoundingImage(cv::Mat image);
 };
+#endif

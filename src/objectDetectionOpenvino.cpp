@@ -1,3 +1,14 @@
+/*
+ * OBJECT DETECTION OPENVINO ROS NODE
+ *
+ * Copyright (c) 2020 Alberto José Tudela Roldán <ajtudela@gmail.com>
+ * 
+ * This file is part of object_detection_openvino project.
+ * 
+ * All rights reserved.
+ *
+ */
+
 #include "object_detection_openvino/objectDetectionOpenvino.hpp"
 
 using namespace InferenceEngine;
