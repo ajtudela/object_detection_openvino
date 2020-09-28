@@ -33,12 +33,13 @@ endif()
 
 # Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-    std_msgs
-    cv_bridge
     roscpp
-    image_transport
-    message_generation
+    roslib
+    std_msgs
     geometry_msgs
+    cv_bridge    
+    image_transport
+    message_generation    
     message_filters
     visualization_msgs
 )
@@ -69,7 +70,9 @@ find_package(catkin REQUIRED COMPONENTS
 #   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 # Generate messages in the 'msg' folder
-add_message_files( FILES
+add_message_files(
+	DIRECTORY msg
+	FILES
 	BoundingBox.msg
 	BoundingBoxArray.msg
 	BoundingBox3d.msg
@@ -77,7 +80,8 @@ add_message_files( FILES
 )
 
 # Generate added messages and services with any dependencies listed here
-generate_messages( DEPENDENCIES
+generate_messages( 
+	DEPENDENCIES
 	std_msgs
 )
 
@@ -89,14 +93,14 @@ generate_messages( DEPENDENCIES
 # Declare things to be passed to dependent projects
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
-    CATKIN_DEPENDS
-        cv_bridge
+    CATKIN_DEPENDS        
         roscpp
+        roslib
         std_msgs
-        image_transport
-        message_runtime
         geometry_msgs
+        cv_bridge
+        image_transport
+        message_runtime        
         message_filters
         visualization_msgs
     DEPENDS Boost
@@ -120,7 +124,8 @@ add_executable(${PROJECT_NAME}
 )
 
 # Add cmake target dependencies of the executable
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
@@ -148,12 +153,13 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-# Mark cpp header files for installation
+## Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
+
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
   PATTERN ".svn" EXCLUDE
