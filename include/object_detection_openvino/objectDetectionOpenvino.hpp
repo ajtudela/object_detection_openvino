@@ -93,7 +93,7 @@ class ObjectDetectionOpenvino{
 
 		std::string inputName_, outputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, depthFrameId_, infoTopic_, colorTopic_, depthTopic_, deviceTarget_;
+		std::string colorFrameId_, depthFrameId_, infoTopic_, colorTopic_, depthTopic_, imageDetectedTopic_, boundingBoxTopic_, boundingBox3dTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
 		
 		int detectionId_;
