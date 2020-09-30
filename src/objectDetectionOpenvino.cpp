@@ -522,7 +522,7 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 			
 			// Extract 3d coordinates from depth image
 			// We extract the middle point of the bounding box
-			// TO-DO: Improve the object septh using the histogram
+			// TO-DO: Improve the object depth using the histogram
 			float Xc = (object.xmax + object.xmin) / 2;
 			float Yc = (object.ymax + object.ymin) / 2;
 			float Zc = 0.001 * (float)depthFrame->image.at<u_int16_t>(cv::Point(Yc,Xc));
@@ -631,7 +631,7 @@ visualization_msgs::Marker ObjectDetectionOpenvino::createLabel3dMarker(int id, 
 	marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
 	marker.action = visualization_msgs::Marker::ADD;
 	marker.lifetime = ros::Duration(0.15);
-	marker.pose.position.x = poseMin.position.x+0.3;
+	marker.pose.position.x = poseMin.position.x + 0.3;
 	marker.pose.position.y = poseMin.position.y;
 	marker.pose.position.z = poseMin.position.z + 0.05;
 	marker.pose.orientation.x = 0.0;
