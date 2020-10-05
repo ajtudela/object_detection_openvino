@@ -59,6 +59,7 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	// Read network model **/
 	ROS_INFO("[ObjectDetectionOpenvino] Loading network files");
 	netReader_.ReadNetwork(modelFileName_);
+
 	// Set batch size to 1
 	ROS_INFO("[ObjectDetectionOpenvino] Batch size is forced to  1");
 	netReader_.getNetwork().setBatchSize(1);
