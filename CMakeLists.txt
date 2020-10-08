@@ -37,9 +37,10 @@ find_package(catkin REQUIRED COMPONENTS
     roslib
     std_msgs
     geometry_msgs
-    cv_bridge    
+    sensor_msgs
+    cv_bridge
     image_transport
-    message_generation    
+    message_generation
     message_filters
     visualization_msgs
 )
@@ -83,6 +84,7 @@ add_message_files(
 generate_messages( 
 	DEPENDENCIES
 	std_msgs
+	sensor_msgs
 )
 
 
@@ -98,9 +100,10 @@ catkin_package(
         roslib
         std_msgs
         geometry_msgs
+        sensor_msgs
         cv_bridge
         image_transport
-        message_runtime        
+        message_runtime
         message_filters
         visualization_msgs
     DEPENDS Boost

@@ -212,11 +212,15 @@ object_detection_openvino::BoundingBox ObjectDetectionOpenvino::DetectionObject:
 	object_detection_openvino::BoundingBox boundingBox;
 	boundingBox.id = this->id;
 	boundingBox.Class = this->Class;
-	boundingBox.probability = this->confidence;
-	boundingBox.xmin = this->xmin;
-	boundingBox.ymin = this->ymin;
-	boundingBox.xmax = this->xmax;
-	boundingBox.ymax = this->ymax;
+	boundingBox.confidence = this->confidence;
+	boundingBox.roi.x_offset = this->xmin;
+	boundingBox.roi.y_offset = this->ymin;
+	boundingBox.roi.height = this->ymax - this->xmin;
+	boundingBox.roi.width = this->xmax - this->ymin;
+	
+	if(this->xmin == 0 && this->ymin == 0) boundingBox.roi.do_rectify = false;
+	else boundingBox.roi.do_rectify = true;
+	
 	return boundingBox;
 }
 
@@ -225,7 +229,7 @@ object_detection_openvino::BoundingBox3d ObjectDetectionOpenvino::DetectionObjec
 	object_detection_openvino::BoundingBox3d boundingBox;
 	boundingBox.id = this->id;
 	boundingBox.Class = this->Class;
-	boundingBox.probability = this->confidence;
+	boundingBox.confidence = this->confidence;
 	boundingBox.xmin = this->xMin3d;
 	boundingBox.ymin = this->yMin3d;
 	boundingBox.zmin = this->zMin3d;
