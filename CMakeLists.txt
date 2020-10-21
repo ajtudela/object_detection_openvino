@@ -16,6 +16,19 @@ else()
     include_directories(${OpenCV_INCLUDE_DIRS})
 endif()
 
+# NGraph
+find_package(ngraph REQUIRED PATHS "/opt/intel/openvino/deployment_tools/ngraph")
+if(NOT(ngraph_FOUND))
+    message(WARNING "ngraph is disabled or not found.")
+    return()
+else()
+  set (ngraph_INCLUDE_DIR /opt/intel/openvino/deployment_tools/ngraph/include)
+  include_directories ( ${ngraph_INCLUDE_DIR} )
+  link_libraries ( ${ngraph_LIBRARIES} )
+  message ( STATUS "ngraph include DIRECTORY: " ${ngraph_INCLUDE_DIR})
+  message ( STATUS "ngraph LIBRARIES: "${ngraph_LIBRARIES})
+endif()
+
 # InferenceEngine
 find_package(InferenceEngine 2.0 QUIET)
 if(NOT(InferenceEngine_FOUND))
@@ -23,8 +36,7 @@ if(NOT(InferenceEngine_FOUND))
     return()
 else()
     include_directories(${InferenceEngine_INCLUDE_DIRS})
-    include_directories(${InferenceEngine_INCLUDE_DIRS}/../samples/common/)
-    include_directories(${InferenceEngine_INCLUDE_DIRS}/../src/extension/)
+    include_directories(${InferenceEngine_INCLUDE_DIRS}/../samples/cpp/common/)
 endif()
 
 if(TARGET IE::ie_cpu_extension)
@@ -49,26 +61,6 @@ find_package(catkin REQUIRED COMPONENTS
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
-
-# To declare and build messages, services or actions from within this
-# package, follow these steps:
-# * Let MSG_DEP_SET be the set of packages whose message types you use in
-#   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
-# * In the file package.xml:
-#   * add a build_depend tag for "message_generation"
-#   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
-#   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-#     but can be declared for certainty nonetheless:
-#     * add a exec_depend tag for "message_runtime"
-# * In this file (CMakeLists.txt):
-#   * add "message_generation" and every package in MSG_DEP_SET to
-#     find_package(catkin REQUIRED COMPONENTS ...)
-#   * add "message_runtime" and every package in MSG_DEP_SET to
-#     catkin_package(CATKIN_DEPENDS ...)
-#   * uncomment the add_*_files sections below as needed
-#     and list every .msg/.srv/.action file to be processed
-#   * uncomment the generate_messages entry below
-#   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -95,7 +87,7 @@ generate_messages(
 # Declare things to be passed to dependent projects
 catkin_package(
     INCLUDE_DIRS include
-    CATKIN_DEPENDS        
+    CATKIN_DEPENDS
         roscpp
         roslib
         std_msgs
@@ -132,6 +124,7 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
+    ngraph::ngraph
     ${InferenceEngine_LIBRARIES} 
     ${Boost_LIBRARIES}
     ${OpenCV_LIBRARIES}

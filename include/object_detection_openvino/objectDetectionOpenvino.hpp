@@ -24,6 +24,7 @@
 #include <string>
 #include <algorithm>
 #include <iterator>
+#include <boost/filesystem.hpp>
 
 // ROS
 #include <ros/ros.h>
@@ -40,16 +41,22 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <object_detection_openvino/yoloParams.hpp>
 #include <object_detection_openvino/BoundingBoxArray.h>
 #include <object_detection_openvino/BoundingBox3dArray.h>
 
 // OpenCv
-#include <samples/ocv_common.hpp>
+
 #include <samples/slog.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 // OpenVINO
 #include <inference_engine.hpp>
+#include <samples/ocv_common.hpp>
+#include <ngraph/ngraph.hpp>
 
 #ifdef WITH_EXTENSIONS
     #include <ext_list.hpp>
@@ -76,6 +83,7 @@ class ObjectDetectionOpenvino{
 			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence, float h_scale, float w_scale);
 			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence);
 			bool operator<(const DetectionObject &s2) const;
+			bool operator>(const DetectionObject &s2) const;
 			object_detection_openvino::BoundingBox BoundingBox(int id);
 			object_detection_openvino::BoundingBox3d BoundingBox3d(int id);
 		};
@@ -92,7 +100,7 @@ class ObjectDetectionOpenvino{
 		
 		std_msgs::Header imageHeader_;
 
-		std::string inputName_, outputName_, networkType_;
+		std::string inputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
 		std::string colorFrameId_, depthFrameId_, infoTopic_, colorTopic_, depthTopic_, imageDetectedTopic_, boundingBoxTopic_, boundingBox3dTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
@@ -101,11 +109,12 @@ class ObjectDetectionOpenvino{
 		float thresh_, iouThresh_;
 		bool showFPS_, outputImage_, outputBoxes_, outputMarkers_;
 		
-		cv::Mat nextFrame_, currFrame_;
+		std::map<std::string, YoloParams> yoloParams_;
+		cv::Mat nextFrame_, currFrame_, depthFrame_;
 		InferenceEngine::InferRequest::Ptr async_infer_request_curr_, async_infer_request_next_;
 		InferenceEngine::OutputsDataMap outputInfo_;
 		InferenceEngine::InputsDataMap inputInfo_;
-		InferenceEngine::CNNNetReader netReader_;
+		InferenceEngine::CNNNetwork cnnNetwork_;
 		InferenceEngine::Core core_;
 
 		typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
@@ -115,7 +124,7 @@ class ObjectDetectionOpenvino{
 		int getColor(int c, int x, int max);
 		static int EntryIndex(int side, int lcoords, int lclasses, int location, int entry);
 		double IntersectionOverUnion(const DetectionObject &box_1, const DetectionObject &box_2);
-		void ParseYOLOV3Output(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
+		void ParseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
 		void ParseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
 		void cameraCallback(const sensor_msgs::ImageConstPtr& colorImageMsg, const sensor_msgs::ImageConstPtr& depthImageMsg, const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
 		visualization_msgs::Marker createBoundingBox3dMarker(int id, geometry_msgs::Pose poseMin, geometry_msgs::Pose poseMax, float colorRGB[3], std::string targetFrame, ros::Time stamp);

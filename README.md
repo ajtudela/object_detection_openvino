@@ -6,6 +6,10 @@ A depth camera is needed to perform 3d coordinates extraction.
 
 The work is based on [this](https://github.com/PINTO0309/OpenVINO-YoloV3).
 
+Requirements
+============
+* OpenVINO 2020.3 or newer.
+
 Usage
 =====
 
