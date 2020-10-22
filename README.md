@@ -64,12 +64,12 @@ Publications
  * ```image_detected_topic```
   [sensor_msgs/Image, default: detected_image]
   Image with the bounding boxes sourrunding the objects detected.
- * ```bounding_box_topic```
-  [object_detection_openvino/BoundingBoxArray, default: bounding_boxes]
-  List with the bounding boxes sourrunding the objects detected.
- * ```bounding_box3d_topic```
-  [object_detection_openvino/BoundingBox3dArray, default: bounding_boxes3d]
-  List with the 3d bounding boxes sourrunding the objects detected.
+ * ```detection2d_topic```
+  [object_detection_openvino/Detection2DArray, default: detection2d]
+  List with the objects detected in the image.
+ * ```detection3d_topic```
+  [object_detection_openvino/Detection3DArray, default: detection3d]
+  List with the objects detected in the color and depth images.
  * ```detection_markers```
   [visualization_msgs/MarkerArray]
   3d markers of the objects detected.

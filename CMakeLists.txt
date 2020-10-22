@@ -55,6 +55,7 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
     message_filters
     visualization_msgs
+    vision_msgs
 )
 
 
@@ -66,10 +67,10 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
 	DIRECTORY msg
 	FILES
-	BoundingBox.msg
-	BoundingBoxArray.msg
-	BoundingBox3d.msg
-	BoundingBox3dArray.msg
+	Detection2D.msg
+	Detection2DArray.msg
+	Detection3D.msg
+	Detection3DArray.msg
 )
 
 # Generate added messages and services with any dependencies listed here
@@ -77,6 +78,7 @@ generate_messages(
 	DEPENDENCIES
 	std_msgs
 	sensor_msgs
+	vision_msgs
 )
 
 

@@ -42,11 +42,10 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <object_detection_openvino/yoloParams.hpp>
-#include <object_detection_openvino/BoundingBoxArray.h>
-#include <object_detection_openvino/BoundingBox3dArray.h>
+#include <object_detection_openvino/Detection2DArray.h>
+#include <object_detection_openvino/Detection3DArray.h>
 
 // OpenCv
-
 #include <samples/slog.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
@@ -76,16 +75,17 @@ class ObjectDetectionOpenvino{
 
 		struct DetectionObject{
 			int xmin, ymin, xmax, ymax, classId, id;
-			float xMin3d, yMin3d, zMin3d, xMax3d, yMax3d, zMax3d;
 			float confidence;
 			std::string Class;
+			geometry_msgs::Pose center;
+			geometry_msgs::Vector3 size;
 
 			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence, float h_scale, float w_scale);
 			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence);
 			bool operator<(const DetectionObject &s2) const;
 			bool operator>(const DetectionObject &s2) const;
-			object_detection_openvino::BoundingBox BoundingBox(int id);
-			object_detection_openvino::BoundingBox3d BoundingBox3d(int id);
+			object_detection_openvino::Detection2D Detection2D(int id);
+			object_detection_openvino::Detection3D Detection3D(int id);
 		};
 
 		ros::NodeHandle node_, nodePrivate_;
@@ -95,19 +95,17 @@ class ObjectDetectionOpenvino{
 		message_filters::Subscriber<sensor_msgs::CameraInfo> cameraInfoSubscriber_;
 		typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> MySyncPolicy;
 		message_filters::Synchronizer<MySyncPolicy> sync;
-		ros::Publisher boundingBoxesPublisher_, markerPublisher_, boundingBoxes3dPublisher_;
+		ros::Publisher detection2DPublisher_, markerPublisher_, detection3DPublisher_;
 		image_transport::Publisher detectionImagePublisher_;
-		
-		std_msgs::Header imageHeader_;
 
 		std::string inputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, depthFrameId_, infoTopic_, colorTopic_, depthTopic_, imageDetectedTopic_, boundingBoxTopic_, boundingBox3dTopic_, deviceTarget_;
+		std::string colorFrameId_, depthFrameId_, infoTopic_, colorTopic_, depthTopic_, imageDetectedTopic_, detection2DTopic_, detection3DTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
 		
 		int detectionId_;
 		float thresh_, iouThresh_;
-		bool showFPS_, outputImage_, outputBoxes_, outputMarkers_;
+		bool showFPS_, outputImage_, outputMarkers_;
 		
 		std::map<std::string, YoloParams> yoloParams_;
 		cv::Mat nextFrame_, currFrame_, depthFrame_;
@@ -121,14 +119,15 @@ class ObjectDetectionOpenvino{
 		
 		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
 		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+		void frameToBlob(const cv::Mat &frame, InferenceEngine::InferRequest::Ptr &inferRequest, const std::string &inputName, bool autoResize = false);
 		int getColor(int c, int x, int max);
-		static int EntryIndex(int side, int lcoords, int lclasses, int location, int entry);
-		double IntersectionOverUnion(const DetectionObject &box_1, const DetectionObject &box_2);
-		void ParseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
-		void ParseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
+		static int entryIndex(int side, int lcoords, int lclasses, int location, int entry);
+		double intersectionOverUnion(const DetectionObject &box_1, const DetectionObject &box_2);
+		void parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
+		void parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
 		void cameraCallback(const sensor_msgs::ImageConstPtr& colorImageMsg, const sensor_msgs::ImageConstPtr& depthImageMsg, const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
-		visualization_msgs::Marker createBoundingBox3dMarker(int id, geometry_msgs::Pose poseMin, geometry_msgs::Pose poseMax, float colorRGB[3], std::string targetFrame, ros::Time stamp);
-		visualization_msgs::Marker createLabel3dMarker(int id, std::string label, geometry_msgs::Pose poseMin, geometry_msgs::Pose poseMax, float colorRGB[3], std::string targetFrame, ros::Time stamp);
+		visualization_msgs::Marker createBoundingBox3dMarker(int id, geometry_msgs::Pose center, geometry_msgs::Vector3 size, float colorRGB[3], std::string targetFrame, ros::Time stamp);
+		visualization_msgs::Marker createLabel3dMarker(int id, std::string label, geometry_msgs::Pose pose, float colorRGB[3], std::string targetFrame, ros::Time stamp);
 		void publishImage(cv::Mat image);
 		void publishBoundingImage(cv::Mat image);
 };
