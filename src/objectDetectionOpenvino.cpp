@@ -511,9 +511,11 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 
 		// Format headers
 		detections2D.header.frame_id = colorFrameId_;
-		detections2D.header.stamp = ros::Time::now();
+		//detections2D.header.stamp = ros::Time::now();
+		detections2D.header.stamp = colorImageMsg->header.stamp;
 		detections3D.header.frame_id = colorFrameId_;
-		detections3D.header.stamp = ros::Time::now();
+		//detections3D.header.stamp = ros::Time::now();
+		detections3D.header.stamp = colorImageMsg->header.stamp;
 		
 		for(auto &object : objects) {
 			if (object.confidence < thresh_)
@@ -593,9 +595,11 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 			
 			// Markers 
 			if(outputMarkers_){
-				visualization_msgs::Marker marker = createBoundingBox3dMarker(detectionId_, object.center, object.size, colorRGB, depthFrameId_, ros::Time::now());
+				//visualization_msgs::Marker marker = createBoundingBox3dMarker(detectionId_, object.center, object.size, colorRGB, depthFrameId_, ros::Time::now());
+				visualization_msgs::Marker marker = createBoundingBox3dMarker(detectionId_, object.center, object.size, colorRGB, depthFrameId_, detections3D.header.stamp);
 				boxMarkerArray.markers.push_back(marker);
-				marker = createLabel3dMarker(detectionId_*10, this->labels_[label].c_str(), object.center, colorRGB, depthFrameId_, ros::Time::now());
+				//marker = createLabel3dMarker(detectionId_*10, this->labels_[label].c_str(), object.center, colorRGB, depthFrameId_, ros::Time::now());
+				marker = createLabel3dMarker(detectionId_*10, this->labels_[label].c_str(), object.center, colorRGB, depthFrameId_, detections3D.header.stamp);
 				boxMarkerArray.markers.push_back(marker);
 			}
 
