@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+	<node pkg="object_detection_openvino" type="object_detection_openvino" name="object_detection_openvino" output="screen">
+		<param name="color_topic"			value="/camera/color/image_raw"/>
+		<param name="depth_topic"			value="/camera/aligned_depth_to_color/image_raw"/>
+		<param name="info_topic"			value="/camera/aligned_depth_to_color/camera_info"/>
+		<param name="image_detected_topic"	value="detected_image"/>
+		<param name="detection2d_topic"		value="detection2d"/>
+		<param name="detection3d_topic"		value="detection3d"/>
+		<param name="model_thresh"			value="0.4"/>
+		<param name="model_iou_thresh"		value="0.4"/>
+		<param name="model_xml"				value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.xml"/>
+		<param name="model_bin"				value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.bin"/>
+		<param name="model_labels"			value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.labels"/>
+		<param name="model_type"			value="SSD"/>
+		<param name="device_target"			value="MYRIAD"/>
+		<param name="show_fps"				value="false"/>
+		<param name="output_image"			value="true"/>
+		<param name="output_markers"		value="true"/>
+	</node>
+</launch>
+

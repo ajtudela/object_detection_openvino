@@ -10,8 +10,8 @@
 		<arg name="enable_accel"		value="false"/>
 		<arg name="filters"				value="decimation,temporal"/>
 	</include>
-	
+
 	<!-- Launch object detection -->
-	<include file="$(find object_detection_openvino)/launch/object_detection_openvino.launch"/>
+	<include file="$(find object_detection_openvino)/launch/mobilenet_cpu.launch"/>
 </launch>
 
