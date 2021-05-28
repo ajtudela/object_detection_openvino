@@ -9,9 +9,12 @@
  *
  */
 
-#include "object_detection_openvino/objectDetectionOpenvino.hpp"
+#include <iostream>
+#include <iterator>
+#include <boost/filesystem.hpp>
+#include <ngraph/ngraph.hpp>
 
-using namespace InferenceEngine;
+#include "object_detection_openvino/objectDetectionOpenvino.hpp"
 
 /* Initialize the subscribers, the publishers and the inference engine */
 ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_){
@@ -23,7 +26,7 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 
 	initialize();
 
-	ROS_INFO_STREAM("[Object detection Openvino]: Loading Inference Engine" << GetInferenceEngineVersion());
+	ROS_INFO_STREAM("[Object detection Openvino]: Loading Inference Engine" << InferenceEngine::GetInferenceEngineVersion());
 	ROS_INFO_STREAM("[Object detection Openvino]: Device info: " << core_.GetVersions(deviceTarget_));
 
 	// Load extensions for the plugin 
@@ -61,16 +64,16 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	/* Configuring input and output */
 	// Prepare input blobs
 	ROS_INFO("[Object detection Openvino]: Checking that the inputs are as expected");
-	inputInfo_ = InputsDataMap(cnnNetwork_.getInputsInfo());
+	inputInfo_ = InferenceEngine::InputsDataMap(cnnNetwork_.getInputsInfo());
 	if(networkType_ == "YOLO"){
 		if(inputInfo_.size() != 1){
 			ROS_FATAL("[Object detection Openvino]: Only accepts networks that have only one input");
 			ros::shutdown();
 		}
-		InputInfo::Ptr& input = inputInfo_.begin()->second;
+		InferenceEngine::InputInfo::Ptr& input = inputInfo_.begin()->second;
 		inputName_ = inputInfo_.begin()->first;
-		input->setPrecision(Precision::U8);
-		input->getInputData()->setLayout(Layout::NCHW);
+		input->setPrecision(InferenceEngine::Precision::U8);
+		input->getInputData()->setLayout(InferenceEngine::Layout::NCHW);
 	}else if(networkType_ == "SSD"){
 		if(inputInfo_.size() != 1 && inputInfo_.size() != 2 ){
 			ROS_FATAL("[Object detection Openvino]: Only accepts networks with 1 or 2 inputs");
@@ -80,12 +83,12 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 			// First input contains images
 			if(input.second->getTensorDesc().getDims().size() == 4){
 				inputName_ = input.first;
-				input.second->setPrecision(Precision::U8);
-				input.second->getInputData()->setLayout(Layout::NCHW);
+				input.second->setPrecision(InferenceEngine::Precision::U8);
+				input.second->getInputData()->setLayout(InferenceEngine::Layout::NCHW);
 			// Second input contains image info
 			}else if (input.second->getTensorDesc().getDims().size() == 2){
 				inputName_ = input.first;
-				input.second->setPrecision(Precision::FP32);
+				input.second->setPrecision(InferenceEngine::Precision::FP32);
 			}else{
 				throw std::logic_error("[Object detection Openvino]: Unsupported " + std::to_string(input.second->getTensorDesc().getDims().size()) + "D "
 										"input layer '" + input.first + "'. Only 2D and 4D input layers are supported");
@@ -96,14 +99,14 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 
 	// Set batch size to 1
 	ROS_INFO("[Object detection Openvino]: Batch size is forced to  1");
-	ICNNNetwork::InputShapes inputShapes = cnnNetwork_.getInputShapes();
-	SizeVector& inSizeVector = inputShapes.begin()->second;
+	InferenceEngine::ICNNNetwork::InputShapes inputShapes = cnnNetwork_.getInputShapes();
+	InferenceEngine::SizeVector& inSizeVector = inputShapes.begin()->second;
 	inSizeVector[0] = 1; 
 	cnnNetwork_.reshape(inputShapes);
 
 	// Prepare output blobs
 	ROS_INFO("[Object detection Openvino]: Checking that the outputs are as expected");
-	outputInfo_ = OutputsDataMap(cnnNetwork_.getOutputsInfo());
+	outputInfo_ = InferenceEngine::OutputsDataMap(cnnNetwork_.getOutputsInfo());
 	if(networkType_ == "YOLO"){
 		if(outputInfo_.size() != 3 && outputInfo_.size() != 2){
 			ROS_FATAL("[Object detection Openvino]: Only accepts networks with three (YOLO) or two (tiny-YOLO) outputs");
@@ -111,8 +114,8 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 		}
 
 		for(auto &output : outputInfo_){
-			output.second->setPrecision(Precision::FP32);
-			output.second->setLayout(Layout::NCHW);
+			output.second->setPrecision(InferenceEngine::Precision::FP32);
+			output.second->setLayout(InferenceEngine::Layout::NCHW);
 		}
 
 		if (auto ngraphFunction = cnnNetwork_.getFunction()){
@@ -138,14 +141,14 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 		}
 
 		for(auto &output : outputInfo_){
-			output.second->setPrecision(Precision::FP32);
-			output.second->setLayout(Layout::NCHW);
+			output.second->setPrecision(InferenceEngine::Precision::FP32);
+			output.second->setLayout(InferenceEngine::Layout::NCHW);
 		}
 	}
 
 	// Load model to the device 
 	ROS_INFO("[Object detection Openvino]: Loading model to the device");
-	ExecutableNetwork network = core_.LoadNetwork(cnnNetwork_, deviceTarget_);
+	InferenceEngine::ExecutableNetwork network = core_.LoadNetwork(cnnNetwork_, deviceTarget_);
 
 	// Create inference request
 	ROS_INFO("[Object detection Openvino]: Create infer request");
@@ -244,15 +247,15 @@ void ObjectDetectionOpenvino::frameToBlob(const cv::Mat &frame, InferenceEngine:
 		inferRequest->SetBlob(inputName, wrapMat2Blob(frame));
 	}else{
 		// Resize and copy data from the image to the input blob
-		Blob::Ptr frameBlob = inferRequest->GetBlob(inputName);
+		InferenceEngine::Blob::Ptr frameBlob = inferRequest->GetBlob(inputName);
 		matU8ToBlob<uint8_t>(frame, frameBlob);
 	}
 }
 
 /* Parse Mobiletnet SSD output */
-void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold,  std::vector<DetectionObject> &objects){
+void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold,  std::vector<DetectionObject> &objects){
 	// Validating output parameters
-	SizeVector outputDims = blob->getTensorDesc().getDims();
+	InferenceEngine::SizeVector outputDims = blob->getTensorDesc().getDims();
 	int maxProposalCount = static_cast<int>(blob->getTensorDesc().getDims()[2]);
 	const int objectSize = static_cast<int>(blob->getTensorDesc().getDims()[3]);
 
@@ -263,7 +266,7 @@ void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr 
 		throw std::logic_error("[Object detection Openvino]: Incorrect output dimensions for SSD");
 	}
 
-	const float *outputBlob = blob->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
+	const float *outputBlob = blob->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
 	for (int i = 0; i < maxProposalCount; i++) {
 		float id = outputBlob[i * objectSize + 0];
 		if (id < 0) {
@@ -287,7 +290,7 @@ void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr 
 }
 
 /* Parse Yolo v3 output*/
-void ObjectDetectionOpenvino::parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold,  std::vector<DetectionObject> &objects) {
+void ObjectDetectionOpenvino::parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold,  std::vector<DetectionObject> &objects) {
 	// Validating output parameters 
 	const int outBlobH = static_cast<int>(blob->getTensorDesc().getDims()[2]);
 	const int outBlobW = static_cast<int>(blob->getTensorDesc().getDims()[3]);
@@ -299,7 +302,7 @@ void ObjectDetectionOpenvino::parseYOLOV3Output(const YoloParams &params, const 
 
 	auto side = outBlobH;
 	auto sideSquare = side * side;
-	const float *outputBlob = blob->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
+	const float *outputBlob = blob->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
 
 	// Parsing YOLO Region output 
 	for(int i = 0; i < sideSquare; ++i){
@@ -406,7 +409,7 @@ void ObjectDetectionOpenvino::infoCallback(const sensor_msgs::CameraInfo::ConstP
 }
 
 /* Camera Callback */
-void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& colorImageMsg){
+void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
 	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	object_detection_openvino::Detection2DArray detections2D;
@@ -437,7 +440,7 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
 	async_infer_request_next_->StartAsync();
 
-	if (OK == async_infer_request_curr_->Wait(IInferRequest::WaitMode::RESULT_READY)) {
+	if (InferenceEngine::OK == async_infer_request_curr_->Wait(InferenceEngine::IInferRequest::WaitMode::RESULT_READY)) {
 		// Show FPS
 		if (showFPS_ && outputImage_){
 			auto t1 = std::chrono::high_resolution_clock::now();
@@ -462,7 +465,7 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 		}
 
 		// Processing output blobs of the CURRENT request
-		const TensorDesc& inputDesc = inputInfo_.begin()->second.get()->getTensorDesc();
+		const InferenceEngine::TensorDesc& inputDesc = inputInfo_.begin()->second.get()->getTensorDesc();
 		unsigned long resizedImgH = getTensorHeight(inputDesc);
 		unsigned long resizedImgW = getTensorWidth(inputDesc);
 
@@ -470,8 +473,8 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::ImageConstPtr& c
 		std::vector<DetectionObject> objects;
 		for (auto &output : outputInfo_) {
 			auto outputName = output.first;
-			CNNLayerPtr layer = cnnNetwork_.getLayerByName(outputName.c_str());
-			Blob::Ptr blob = async_infer_request_curr_->GetBlob(outputName);
+			InferenceEngine::CNNLayerPtr layer = cnnNetwork_.getLayerByName(outputName.c_str());
+			InferenceEngine::Blob::Ptr blob = async_infer_request_curr_->GetBlob(outputName);
 
 			if(networkType_ == "YOLO") parseYOLOV3Output(yoloParams_[outputName], outputName, blob, resizedImgH, resizedImgW, height, width, thresh_, objects);
 			else if(networkType_ == "SSD") parseSSDOutput(layer, blob, height, width, thresh_, objects);

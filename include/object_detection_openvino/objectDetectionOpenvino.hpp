@@ -13,29 +13,16 @@
 #define OBJECT_DETECTION_OPENVINO_H
 
 // C++
-#include <math.h>
-#include <functional>
-#include <iostream>
-#include <fstream>
-#include <random>
-#include <memory>
 #include <chrono>
 #include <vector>
 #include <string>
-#include <algorithm>
-#include <iterator>
-#include <boost/filesystem.hpp>
 
 // ROS
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
-#include <std_msgs/Header.h>
-#include <std_msgs/Int8.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Vector3.h>
-#include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
-#include <sensor_msgs/RegionOfInterest.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <image_transport/image_transport.h>
 
@@ -43,16 +30,11 @@
 #include <object_detection_openvino/Detection2DArray.h>
 
 // OpenCV
-#include <samples/slog.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 // OpenVINO
 #include <inference_engine.hpp>
 #include <samples/ocv_common.hpp>
-#include <ngraph/ngraph.hpp>
 
 #ifdef WITH_EXTENSIONS
     #include <ext_list.hpp>
@@ -129,7 +111,7 @@ class ObjectDetectionOpenvino{
 		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
 		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
-		void cameraCallback(const sensor_msgs::ImageConstPtr& colorImageMsg);
+		void cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
 		void publishImage(cv::Mat image);
 		void publishBoundingImage(cv::Mat image);
 };

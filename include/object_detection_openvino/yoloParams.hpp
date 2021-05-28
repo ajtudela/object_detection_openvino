@@ -13,7 +13,6 @@
 #define YOLO_PARAMS_H
 
 // OpenVINO
-#include <inference_engine.hpp>
 #include <ngraph/ngraph.hpp>
 
 class YoloParams{
