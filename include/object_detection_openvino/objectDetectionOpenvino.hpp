@@ -26,8 +26,8 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <image_transport/image_transport.h>
 
-#include <object_detection_openvino/yoloParams.hpp>
-#include <object_detection_openvino/Detection2DArray.h>
+#include <object_detection_openvino/detectionObject.h>
+#include <object_detection_openvino/yoloParams.h>
 
 // OpenCV
 #include <cv_bridge/cv_bridge.h>
@@ -45,26 +45,12 @@
 #define YOLO_SCALE_52		52
 #define COCO_CLASSES		80
 
-float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
+typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 
 class ObjectDetectionOpenvino{
 	public:
 		ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private);
 		~ObjectDetectionOpenvino();
-
-		struct DetectionObject{
-			int xmin, ymin, xmax, ymax, classId, id;
-			float confidence;
-			std::string Class;
-			geometry_msgs::Pose center;
-			geometry_msgs::Vector3 size;
-
-			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence, float h_scale, float w_scale);
-			DetectionObject(double x, double y, double h, double w, int classId, std::string Class, float confidence);
-			bool operator<(const DetectionObject &s2) const;
-			bool operator>(const DetectionObject &s2) const;
-			object_detection_openvino::Detection2D Detection2D(int id);
-		};
 
 	private:
 		// ROS related
@@ -74,22 +60,26 @@ class ObjectDetectionOpenvino{
 		image_transport::Subscriber colorSub_;
 		image_transport::Publisher detectionColorPub_;
 		ros::Subscriber infoSub_;
-		ros::Publisher detection2DPub_;
-
+		ros::Publisher detectionInfoPub_, detection2DPub_;
 
 		std::string inputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, infoTopic_, colorTopic_,  detectionImageTopic_, detection2DTopic_, deviceTarget_;
+		std::string colorFrameId_, infoTopic_, colorTopic_,  detectionImageTopic_, detectionInfoTopic_, detection2DTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
 
-		int detectionId_;
 		float fx_, fy_, cx_, cy_;
 		bool showFPS_, outputImage_;
 
+		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
+		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
+		void cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
+		void publishImage(cv::Mat image);
+
 		// OpenVino related
 		std::map<std::string, YoloParams> yoloParams_;
-		cv::Mat nextFrame_, currFrame_, depthFrame_;
-		InferenceEngine::InferRequest::Ptr async_infer_request_curr_, async_infer_request_next_;
+		cv::Mat nextFrame_, currFrame_;
+		InferenceEngine::InferRequest::Ptr asyncInferRequestCurr_, asyncInferRequestNext_;
 		InferenceEngine::OutputsDataMap outputInfo_;
 		InferenceEngine::InputsDataMap inputInfo_;
 		InferenceEngine::CNNNetwork cnnNetwork_;
@@ -102,17 +92,5 @@ class ObjectDetectionOpenvino{
 		void frameToBlob(const cv::Mat &frame, InferenceEngine::InferRequest::Ptr &inferRequest, const std::string &inputName, bool autoResize = false);
 		void parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
 		void parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
-
-		
-		
-
-		typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
-
-		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
-		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
-		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
-		void cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
-		void publishImage(cv::Mat image);
-		void publishBoundingImage(cv::Mat image);
 };
 #endif
