@@ -18,7 +18,7 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/ObjectHypothesisWithPose.h>
 
-#include "object_detection_openvino/objectDetectionOpenvino.hpp"
+#include "object_detection_openvino/objectDetectionOpenvino.h"
 
 /* Initialize the subscribers, the publishers and the inference engine */
 ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_){
