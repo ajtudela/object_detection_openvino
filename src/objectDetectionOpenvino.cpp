@@ -193,9 +193,9 @@ bool ObjectDetectionOpenvino::updateParams(std_srvs::Empty::Request &req, std_sr
 
 	nodePrivate_.param<std::string>("info_topic", infoTopic_, "/camera/info");
 	nodePrivate_.param<std::string>("color_topic", colorTopic_, "/camera/color/image_raw");
-	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "detection_image");
+	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "image_raw");
 	nodePrivate_.param<std::string>("detection_info_topic", detectionInfoTopic_, "detection_info");
-	nodePrivate_.param<std::string>("detection_2d_topic", detection2DTopic_, "detection_2d");
+	nodePrivate_.param<std::string>("detection_2d_topic", detection2DTopic_, "detections_2d");
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
 	nodePrivate_.param<bool>("output_image", outputImage_, true);
@@ -205,18 +205,31 @@ bool ObjectDetectionOpenvino::updateParams(std_srvs::Empty::Request &req, std_sr
 
 /* Camera info Callback */
 void ObjectDetectionOpenvino::infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg){
-	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to camerainfo topic: %s", infoTopic_.c_str());
+	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to camera info topic: %s", infoTopic_.c_str());
 
 	// Read parameters of the camera
 	fx_ = infoMsg->K[0];
 	fy_ = infoMsg->K[4];
 	cx_ = infoMsg->K[2];
 	cy_ = infoMsg->K[5];
+
+	// Create info
+	vision_msgs::VisionInfo detectionInfo;
+	detectionInfo.header = infoMsg->header;
+	detectionInfo.method = networkType_ + " detection with COCO database";
+	detectionInfo.database_location = labelFileName_;
+	detectionInfo.database_version = 0;
+
+	// Publish info
+	detectionInfoPub_.publish(detectionInfo);
 }
 
 /* Camera Callback */
 void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
 	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
+
+	// Note: Only infer object if there's any subscriber
+	if(detectionInfoPub_.getNumSubscribers() == 0 && !detectionColorPub_.getNumSubscribers() == 0 && !detection2DPub_.getNumSubscribers() == 0) return;
 
 	// Read header
 	colorFrameId_ = colorImageMsg->header.frame_id;
@@ -225,13 +238,6 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 	vision_msgs::Detection2DArray detections2D;
 	detections2D.header.frame_id = colorFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
-
-	// Create info
-	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header = detections2D.header;
-	detectionInfo.method = networkType_ + "detection with COCO database";
-	detectionInfo.database_location = labelFileName_;
-	detectionInfo.database_version = 0;
 
 	auto wallclock = std::chrono::high_resolution_clock::now();
 
@@ -251,14 +257,13 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 	frameToBlob(nextFrame_, asyncInferRequestNext_, inputName_, false);
 
 	// Load network
-	auto t0 = std::chrono::high_resolution_clock::now();
-
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
+	auto t0 = std::chrono::high_resolution_clock::now();
 	asyncInferRequestNext_->StartAsync();
 
 	if(InferenceEngine::OK == asyncInferRequestCurr_->Wait(InferenceEngine::IInferRequest::WaitMode::RESULT_READY)){
 		// Show FPS
-		if (showFPS_ && outputImage_){
+		if(showFPS_ && outputImage_){
 			auto t1 = std::chrono::high_resolution_clock::now();
 			ms detection = std::chrono::duration_cast<ms>(t1 - t0);
 
@@ -287,7 +292,7 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 
 		// Parsing outputs
 		std::vector<DetectionObject> objects;
-		for (auto &output : outputInfo_) {
+		for(auto &output: outputInfo_){
 			auto outputName = output.first;
 			InferenceEngine::CNNLayerPtr layer = cnnNetwork_.getLayerByName(outputName.c_str());
 			InferenceEngine::Blob::Ptr blob = asyncInferRequestCurr_->GetBlob(outputName);
@@ -298,7 +303,7 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 
 		// Filtering overlapping boxes
 		std::sort(objects.begin(), objects.end(), std::greater<DetectionObject>());
-		for (int i = 0; i < objects.size(); ++i) {
+		for(int i = 0; i < objects.size(); ++i){
 			if (objects[i].confidence == 0)
 				continue;
 			for (int j = i + 1; j < objects.size(); ++j) {
@@ -308,8 +313,8 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 			}
 		}
 
-		// Process objects
-		for(auto &object : objects){
+		/* Process objects */
+		for(auto &object: objects){
 			// Skip if confidence is less than the threshold
 			if(object.confidence < thresh_) continue;
 
@@ -318,31 +323,13 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 
 			ROS_DEBUG("[Object detection Openvino]: %s tag (%.2f%%)", this->labels_[label].c_str(), confidence*100);
 
-			// Color of the class
-			int offset = object.classId * 123457 % COCO_CLASSES;
-			float colorRGB[3];
-			colorRGB[0] = getColor(2,offset,COCO_CLASSES);
-			colorRGB[1] = getColor(1,offset,COCO_CLASSES);
-			colorRGB[2] = getColor(0,offset,COCO_CLASSES);
-
 			// Improve bounding box
 			object.xmin = object.xmin < 0 ? 0 : object.xmin;
 			object.ymin = object.ymin < 0 ? 0 : object.ymin;
 			object.xmax = object.xmax > width ? width : object.xmax;
 			object.ymax = object.ymax > height ? height : object.ymax;
 
-			// Image
-			if(outputImage_){
-				std::ostringstream conf;
-				conf << ":" << std::fixed << std::setprecision(3) << confidence;
-				std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
-
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
-				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
-			}
-
-			// Create detection2D and push to array
+			/* Create detection2D */
 			vision_msgs::Detection2D detection2D;
 			detection2D.header.frame_id = colorFrameId_;
 			detection2D.header.stamp = colorImageMsg->header.stamp;
@@ -362,7 +349,6 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 			// The 2D data that generated these results
 			cv::Rect rectCrop(object.xmin, object.ymin, object.xmax - object.xmin, object.ymax - object.ymin);
 			cv::Mat croppedImage = currFrame_(rectCrop);
-
 			detection2D.source_img.header = detection2D.header;
 			detection2D.source_img.height = croppedImage.rows;
 			detection2D.source_img.width = croppedImage.cols;
@@ -373,7 +359,26 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 			detection2D.source_img.data.resize(size);
 			memcpy((char*)(&detection2D.source_img.data[0]), croppedImage.data, size);
 
+			// And push to array
 			detections2D.detections.push_back(detection2D);
+
+			/* Image */
+			if(outputImage_){
+				// Color of the class
+				int offset = object.classId * 123457 % COCO_CLASSES;
+				float colorRGB[3];
+				colorRGB[0] = getColor(2,offset,COCO_CLASSES);
+				colorRGB[1] = getColor(1,offset,COCO_CLASSES);
+				colorRGB[2] = getColor(0,offset,COCO_CLASSES);
+				// Text label
+				std::ostringstream conf;
+				conf << ":" << std::fixed << std::setprecision(3) << confidence;
+				std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
+				// Rectangles for class
+				cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
+				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
+				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
+			}
 		}
 	}
 
@@ -385,27 +390,10 @@ void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr&
 	currFrame_ = nextFrame_;
 	nextFrame_ = cv::Mat();
 	asyncInferRequestCurr_.swap(asyncInferRequestNext_);
-
-	return;
 }
 
 /* Publish image */
 void ObjectDetectionOpenvino::publishImage(cv::Mat image){
-	/*sensor_msgs::Image outputImageMsg;
-
-	outputImageMsg.header.stamp = ros::Time::now();
-	outputImageMsg.header.frame_id = colorFrameId_;
-	outputImageMsg.height = image.rows;
-	outputImageMsg.width = image.cols;
-	outputImageMsg.encoding = "bgr8";
-	outputImageMsg.is_bigendian = false;
-	outputImageMsg.step = image.cols * 3;
-	size_t size = outputImageMsg.step * image.rows;
-	outputImageMsg.data.resize(size);
-	memcpy((char*)(&outputImageMsg.data[0]), image.data, size);
-
-	detectionColorPub_.publish(outputImageMsg);*/
-	
 	cv_bridge::CvImage outputImageMsg;
 	outputImageMsg.header.stamp = ros::Time::now();
 	outputImageMsg.header.frame_id = colorFrameId_;
