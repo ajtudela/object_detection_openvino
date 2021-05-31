@@ -15,6 +15,7 @@
 		<param name="model_type"				value="YOLO"/>
 		<param name="device_target"				value="CPU"/>
 		<param name="show_fps"					value="false"/>
+		<param name="use_depth"					value="false"/>
 		<param name="output_image"				value="true"/>
 	</node>
 </launch>

@@ -21,7 +21,8 @@
 #include "object_detection_openvino/objectDetectionOpenvino.h"
 
 /* Initialize the subscribers, the publishers and the inference engine */
-ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_){
+ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_), 
+																										syncTwoImage_(SyncPolicyTwoImage(5), colorSub_, depthSub_){
 	// Initialize ROS parameters
 	ROS_INFO("[Object detection Openvino]: Reading ROS parameters");
 	paramsSrv_ = nodePrivate_.advertiseService("params", &ObjectDetectionOpenvino::updateParams, this);
@@ -43,9 +44,16 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	}
 #endif
 
-	// Initialize subscribers
+	// Initialize subscribers, create sync policy and synchronizer
 	infoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(infoTopic_, 1, &ObjectDetectionOpenvino::infoCallback, this);
-	colorSub_ = imageTransport_.subscribe(colorTopic_, 1, &ObjectDetectionOpenvino::cameraCallback, this);
+	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
+	if(!useDepth_){
+		colorSub_.registerCallback(boost::bind(&ObjectDetectionOpenvino::oneImageCallback, this,_1));
+	}else{
+		depthSub_.subscribe(imageTransport_, depthTopic_, 10);
+		syncTwoImage_.connectInput(colorSub_, depthSub_);
+		syncTwoImage_.registerCallback(boost::bind(&ObjectDetectionOpenvino::twoImageCallback, this,_1,_2));
+	}
 
 	// Initialize publishers
 	detectionColorPub_ = imageTransport_.advertise(detectionImageTopic_, 1);
@@ -172,11 +180,13 @@ ObjectDetectionOpenvino::~ObjectDetectionOpenvino(){
 
 	nodePrivate_.deleteParam("info_topic");
 	nodePrivate_.deleteParam("color_topic");
+	nodePrivate_.deleteParam("depth_topic");
 	nodePrivate_.deleteParam("detection_image_topic");
 	nodePrivate_.deleteParam("detection_info_topic");
 	nodePrivate_.deleteParam("detection_2d_topic");
 
 	nodePrivate_.deleteParam("show_fps");
+	nodePrivate_.deleteParam("use_depth");
 	nodePrivate_.deleteParam("output_image");
 }
 
@@ -193,11 +203,13 @@ bool ObjectDetectionOpenvino::updateParams(std_srvs::Empty::Request &req, std_sr
 
 	nodePrivate_.param<std::string>("info_topic", infoTopic_, "/camera/info");
 	nodePrivate_.param<std::string>("color_topic", colorTopic_, "/camera/color/image_raw");
+	nodePrivate_.param<std::string>("depth_topic", depthTopic_, "/camera/depth/image_raw");
 	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "image_raw");
 	nodePrivate_.param<std::string>("detection_info_topic", detectionInfoTopic_, "detection_info");
 	nodePrivate_.param<std::string>("detection_2d_topic", detection2DTopic_, "detections_2d");
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
+	nodePrivate_.param<bool>("use_depth", useDepth_, false);
 	nodePrivate_.param<bool>("output_image", outputImage_, true);
 
 	return true;
@@ -224,14 +236,34 @@ void ObjectDetectionOpenvino::infoCallback(const sensor_msgs::CameraInfo::ConstP
 	detectionInfoPub_.publish(detectionInfo);
 }
 
+/* Callback function for color image */
+void ObjectDetectionOpenvino::oneImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg){
+	std::vector<sensor_msgs::Image::ConstPtr> imageVec;
+	imageVec.push_back(colorImageMsg);
+	cameraCallback(imageVec);
+}
+
+/* Callback function for color and depth */
+void ObjectDetectionOpenvino::twoImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::Image::ConstPtr depthImageMsg){
+	std::vector<sensor_msgs::Image::ConstPtr> imageVec;
+	imageVec.push_back(colorImageMsg);
+	imageVec.push_back(depthImageMsg);
+	cameraCallback(imageVec);
+}
+
 /* Camera Callback */
-void ObjectDetectionOpenvino::cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
+void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Image::ConstPtr>& imageMsg){
 	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
+	if(useDepth_) ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to depth image topic: %s", depthTopic_.c_str());
+
+	// Improve readability
+	if(useDepth_) sensor_msgs::Image::ConstPtr depthImageMsg = imageMsg[1];
 
 	// Note: Only infer object if there's any subscriber
-	if(detectionInfoPub_.getNumSubscribers() == 0 && !detectionColorPub_.getNumSubscribers() == 0 && !detection2DPub_.getNumSubscribers() == 0) return;
+	if(detectionInfoPub_.getNumSubscribers() == 0 && detectionColorPub_.getNumSubscribers() == 0 && detection2DPub_.getNumSubscribers() == 0) return;
 
 	// Read header
+	sensor_msgs::Image::ConstPtr colorImageMsg = imageMsg[0];
 	colorFrameId_ = colorImageMsg->header.frame_id;
 
 	// Create array to publish

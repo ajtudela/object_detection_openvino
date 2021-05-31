@@ -25,6 +25,9 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <image_transport/image_transport.h>
+#include <image_transport/subscriber_filter.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 #include <object_detection_openvino/detectionObject.h>
 #include <object_detection_openvino/yoloParams.h>
@@ -57,23 +60,28 @@ class ObjectDetectionOpenvino{
 		ros::NodeHandle node_, nodePrivate_;
 		ros::ServiceServer paramsSrv_;
 		image_transport::ImageTransport imageTransport_;
-		image_transport::Subscriber colorSub_;
+		image_transport::SubscriberFilter colorSub_, depthSub_;
 		image_transport::Publisher detectionColorPub_;
 		ros::Subscriber infoSub_;
 		ros::Publisher detectionInfoPub_, detection2DPub_;
 
+		typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> SyncPolicyTwoImage;
+		message_filters::Synchronizer<SyncPolicyTwoImage> syncTwoImage_;
+
 		std::string inputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, infoTopic_, colorTopic_,  detectionImageTopic_, detectionInfoTopic_, detection2DTopic_, deviceTarget_;
+		std::string colorFrameId_, infoTopic_, colorTopic_, depthTopic_, detectionImageTopic_, detectionInfoTopic_, detection2DTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
 
 		float fx_, fy_, cx_, cy_;
-		bool showFPS_, outputImage_;
+		bool showFPS_, useDepth_, outputImage_;
 
 		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
 		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
-		void cameraCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
+		void oneImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg);
+		void twoImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::Image::ConstPtr depthImageMsg);
+		void cameraCallback(const std::vector<sensor_msgs::Image::ConstPtr>& imageMsg);
 		void publishImage(cv::Mat image);
 
 		// OpenVino related

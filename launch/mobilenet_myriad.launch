@@ -15,6 +15,7 @@
 		<param name="model_type"				value="SSD"/>
 		<param name="device_target"				value="MYRIAD"/>
 		<param name="show_fps"					value="false"/>
+		<param name="use_depth"					value="false"/>
 		<param name="output_image"				value="true"/>
 	</node>
 </launch>

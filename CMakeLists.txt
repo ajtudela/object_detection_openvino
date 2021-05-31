@@ -52,7 +52,7 @@ find_package(catkin REQUIRED COMPONENTS
     sensor_msgs
     cv_bridge
     image_transport
-    message_generation
+    message_filters
     vision_msgs
 )
 
@@ -76,6 +76,7 @@ catkin_package(
         sensor_msgs
         cv_bridge
         image_transport
+        message_filters
         vision_msgs
     DEPENDS Boost
 )
