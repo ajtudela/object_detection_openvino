@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<!-- Launch Intel RealSense -->
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+		<arg name="align_depth" 		value="true"/>
+		<arg name="enable_fisheye"		value="false"/>
+		<arg name="enable_infra1"		value="false"/>
+		<arg name="enable_infra2"		value="false"/>
+		<arg name="enable_gyro"			value="false"/>
+		<arg name="enable_accel"		value="false"/>
+		<arg name="filters"				value="decimation,temporal"/>
+	</include>
+
+	<!-- Launch object detection -->
+	<include file="$(find object_detection_openvino)/launch/mobilenet_myriad.launch"/>
+</launch>
+

@@ -128,24 +128,6 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 			output.second->setPrecision(InferenceEngine::Precision::FP32);
 			output.second->setLayout(InferenceEngine::Layout::NCHW);
 		}
-
-		if (auto ngraphFunction = cnnNetwork_.getFunction()){
-			for (const auto op : ngraphFunction->get_ops()) {
-				auto outputLayer = outputInfo_.find(op->get_friendly_name());
-				if (outputLayer != outputInfo_.end()) {
-					auto regionYolo = std::dynamic_pointer_cast<ngraph::op::RegionYolo>(op);
-					if (!regionYolo) {
-						throw std::runtime_error("[Object detection Openvino]: Invalid output type: " +
-							std::string(regionYolo->get_type_info().name) + ". RegionYolo expected");
-					}
-					yoloParams_[outputLayer->first] = YoloParams(regionYolo);
-				}
-			}
-		}
-		else {
-			ROS_FATAL("[Object detection Openvino]: Can't get ngraph::Function. Make sure the provided model is in IR version 10 or greater.");
-			ros::shutdown();
-		}
 	}else if(networkType_ == "SSD"){
 		if(outputInfo_.size() != 1){
 			throw std::logic_error("[Object detection Openvino]: Only accepts networks with one output");
@@ -326,11 +308,10 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 		std::vector<DetectionObject> objects;
 		for(auto &output: outputInfo_){
 			auto outputName = output.first;
-			InferenceEngine::CNNLayerPtr layer = cnnNetwork_.getLayerByName(outputName.c_str());
 			InferenceEngine::Blob::Ptr blob = asyncInferRequestCurr_->GetBlob(outputName);
 
-			if(networkType_ == "YOLO") parseYOLOV3Output(yoloParams_[outputName], outputName, blob, resizedImgH, resizedImgW, height, width, thresh_, objects);
-			else if(networkType_ == "SSD") parseSSDOutput(layer, blob, height, width, thresh_, objects);
+			if(networkType_ == "YOLO") parseYOLOV3Output(cnnNetwork_, outputName, blob, resizedImgH, resizedImgW, height, width, thresh_, objects);
+			else if(networkType_ == "SSD") parseSSDOutput(blob, height, width, thresh_, objects);
 		}
 
 		// Filtering overlapping boxes
@@ -399,9 +380,9 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 				// Color of the class
 				int offset = object.classId * 123457 % COCO_CLASSES;
 				float colorRGB[3];
-				colorRGB[0] = getColor(2,offset,COCO_CLASSES);
-				colorRGB[1] = getColor(1,offset,COCO_CLASSES);
-				colorRGB[2] = getColor(0,offset,COCO_CLASSES);
+				colorRGB[0] = getColor(2, offset, COCO_CLASSES);
+				colorRGB[1] = getColor(1, offset, COCO_CLASSES);
+				colorRGB[2] = getColor(0, offset, COCO_CLASSES);
 				// Text label
 				std::ostringstream conf;
 				conf << ":" << std::fixed << std::setprecision(3) << confidence;
@@ -489,7 +470,7 @@ void ObjectDetectionOpenvino::frameToBlob(const cv::Mat &frame, InferenceEngine:
 }
 
 /* Parse Mobiletnet SSD output */
-void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold,  std::vector<DetectionObject> &objects){
+void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold,  std::vector<DetectionObject> &objects){
 	// Validating output parameters
 	InferenceEngine::SizeVector outputDims = blob->getTensorDesc().getDims();
 	int maxProposalCount = static_cast<int>(blob->getTensorDesc().getDims()[2]);
@@ -526,7 +507,7 @@ void ObjectDetectionOpenvino::parseSSDOutput(const InferenceEngine::CNNLayerPtr 
 }
 
 /* Parse Yolo v3 output*/
-void ObjectDetectionOpenvino::parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold,  std::vector<DetectionObject> &objects) {
+void ObjectDetectionOpenvino::parseYOLOV3Output(const InferenceEngine::CNNNetwork &cnnNetwork, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold,  std::vector<DetectionObject> &objects) {
 	// Validating output parameters 
 	const int outBlobH = static_cast<int>(blob->getTensorDesc().getDims()[2]);
 	const int outBlobW = static_cast<int>(blob->getTensorDesc().getDims()[3]);
@@ -534,6 +515,25 @@ void ObjectDetectionOpenvino::parseYOLOV3Output(const YoloParams &params, const 
 		throw std::runtime_error("[Object detection Openvino]: Invalid size of output " + outputName +
 		" It should be in NCHW layout and H should be equal to W. Current H = " + std::to_string(outBlobH) +
 		", current W = " + std::to_string(outBlobW));
+	}
+
+	// Extracting layer parameters
+	YoloParams params;
+	if(auto ngraphFunction = cnnNetwork.getFunction()){
+		for(const auto op: ngraphFunction->get_ops()){
+			if(op->get_friendly_name() == outputName){
+				auto regionYolo = std::dynamic_pointer_cast<ngraph::op::RegionYolo>(op);
+				if(!regionYolo){
+					throw std::runtime_error("Invalid output type: " +
+					std::string(regionYolo->get_type_info().name) + ". RegionYolo expected");
+				}
+
+				params = regionYolo;
+				break;
+			}
+		}
+	}else{
+		throw std::runtime_error("Can't get ngraph::Function. Make sure the provided model is in IR version 10 or greater.");
 	}
 
 	auto side = outBlobH;

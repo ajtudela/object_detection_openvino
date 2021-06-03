@@ -13,6 +13,7 @@
 #define YOLO_PARAMS_H
 
 // OpenVINO
+#include <inference_engine.hpp>
 #include <ngraph/ngraph.hpp>
 
 class YoloParams{
@@ -30,6 +31,23 @@ class YoloParams{
 			num = mask.size();
 
 			computeAnchors(mask);
+		}
+
+		YoloParams(InferenceEngine::CNNLayer::Ptr layer){
+			if(layer->type != "RegionYolo")
+				throw std::runtime_error("Invalid output type: " + layer->type + ". RegionYolo expected");
+
+			num = layer->GetParamAsInt("num");
+			coords = layer->GetParamAsInt("coords");
+			classes = layer->GetParamAsInt("classes");
+
+			try{ anchors = layer->GetParamAsFloats("anchors"); } catch (...){}
+			try{
+				auto mask = layer->GetParamAsInts("mask");
+				num = mask.size();
+
+				computeAnchors(mask);
+			}catch (...){}
 		}
 	private:
 		template <typename T> void computeAnchors(const std::vector<T> & mask){

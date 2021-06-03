@@ -43,9 +43,6 @@
     #include <ext_list.hpp>
 #endif
 
-#define YOLO_SCALE_13		13
-#define YOLO_SCALE_26		26
-#define YOLO_SCALE_52		52
 #define COCO_CLASSES		80
 
 typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
@@ -98,7 +95,7 @@ class ObjectDetectionOpenvino{
 		static int entryIndex(int side, int lcoords, int lclasses, int location, int entry);
 		double intersectionOverUnion(const DetectionObject &box_1, const DetectionObject &box_2);
 		void frameToBlob(const cv::Mat &frame, InferenceEngine::InferRequest::Ptr &inferRequest, const std::string &inputName, bool autoResize = false);
-		void parseSSDOutput(const InferenceEngine::CNNLayerPtr &layer, const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
-		void parseYOLOV3Output(const YoloParams &params, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
+		void parseSSDOutput(const InferenceEngine::Blob::Ptr &blob, const unsigned long height, const unsigned long width, const float threshold, std::vector<DetectionObject> &objects);
+		void parseYOLOV3Output(const InferenceEngine::CNNNetwork &cnnNetwork, const std::string &outputName, const InferenceEngine::Blob::Ptr &blob, const unsigned long resizedImgH, const unsigned long resizedImgW, const unsigned long originalImgH, const unsigned long originalImgW, const float threshold, std::vector<DetectionObject> &objects);
 };
 #endif

@@ -8,7 +8,7 @@ The work is based on [this](https://github.com/PINTO0309/OpenVINO-YoloV3).
 
 Requirements
 ============
-* OpenVINO 2020.3 or newer.
+* OpenVINO 2020.3.2.
 
 Usage
 =====
