@@ -12,7 +12,9 @@
 #include <iostream>
 #include <iterator>
 #include <boost/filesystem.hpp>
+
 #include <ngraph/ngraph.hpp>
+
 #include <sensor_msgs/image_encodings.h>
 #include <vision_msgs/VisionInfo.h>
 #include <vision_msgs/Detection2DArray.h>
@@ -34,13 +36,15 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 
 	// Load extensions for the plugin 
 #ifdef WITH_EXTENSIONS
-	if (deviceTarget_.find("CPU") != std::string::npos) {
+	if(deviceTarget_.find("CPU") != std::string::npos){
 		/**
 		 * cpu_extensions library is compiled from "extension" folder containing
 		 * custom MKLDNNPlugin layer implementations. These layers are not supported
 		 * by mkldnn, but they can be useful for inferring custom topologies.
 		**/
 		core_.AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>(), "CPU");
+	}else if(deviceTarget_.find("GPU") != std::string::npos){
+		core_.SetConfig({{PluginConfigParams::KEY_DUMP_KERNELS, PluginConfigParams::YES}}, "GPU");
 	}
 #endif
 
