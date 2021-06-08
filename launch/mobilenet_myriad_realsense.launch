@@ -8,7 +8,7 @@
 		<arg name="enable_infra2"		value="false"/>
 		<arg name="enable_gyro"			value="false"/>
 		<arg name="enable_accel"		value="false"/>
-		<arg name="filters"				value="decimation,temporal"/>
+		<arg name="filters"				value="decimation,disparity,spatial,temporal,hole_filling"/>
 	</include>
 
 	<!-- Launch object detection -->
