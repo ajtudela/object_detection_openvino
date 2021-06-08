@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <launch>
+	<arg name="info_topic"					default="/camera/camera_info"/>
+	<arg name="color_topic" 				default="/camera/color/image_raw"/>
+	<arg name="depth_topic" 				default="-"/>
+
 	<node pkg="object_detection_openvino" type="object_detection_openvino" name="object_detection" output="screen">
-		<param name="info_topic"				value="/camera/camera_info"/>
-		<param name="color_topic"				value="/camera/color/image_raw"/>
+		<param name="info_topic"				value="$(arg info_topic)"/>
+		<param name="color_topic"				value="$(arg color_topic)"/>
+		<param name="depth_topic"				value="$(arg depth_topic)"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
 		<param name="detection_2d_topic"		value="detections_2d"/>
@@ -15,7 +19,6 @@
 		<param name="model_type"				value="YOLO"/>
 		<param name="device_target"				value="MYRIAD"/>
 		<param name="show_fps"					value="false"/>
-		<param name="use_depth"					value="false"/>
 		<param name="output_image"				value="true"/>
 	</node>
 </launch>
