@@ -2,7 +2,7 @@
 <launch>
 	<arg name="info_topic"					default="/camera/camera_info"/>
 	<arg name="color_topic" 				default="/camera/color/image_raw"/>
-	<arg name="depth_topic" 				default="-"/>
+	<arg name="depth_topic" 				default=""/>
 
 	<node pkg="object_detection_openvino" type="object_detection_openvino" name="object_detection" output="screen">
 		<param name="info_topic"				value="$(arg info_topic)"/>
@@ -10,7 +10,7 @@
 		<param name="depth_topic"				value="$(arg depth_topic)"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
-		<param name="detection_2d_topic"		value="detections_2d"/>
+		<param name="detections_topic"			value="detections"/>
 		<param name="model_thresh"				value="0.4"/>
 		<param name="model_iou_thresh"			value="0.4"/>
 		<param name="model_xml"					value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.xml"/>

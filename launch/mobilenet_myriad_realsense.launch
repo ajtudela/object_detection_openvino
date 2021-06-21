@@ -14,7 +14,7 @@
 
 	<!-- Launch object detection -->
 	<include file="$(find object_detection_openvino)/launch/mobilenet_myriad.launch">
-		<arg name="info_topic"			value="/realsense/camera_info"/>
+		<arg name="info_topic"			value="/realsense/aligned_depth_to_color/camera_info"/>
 		<arg name="color_topic"			value="/realsense/color/image_raw"/>
 		<arg name="depth_topic"			value="/realsense/aligned_depth_to_color/image_raw"/>
 	</include>
