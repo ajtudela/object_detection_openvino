@@ -28,10 +28,7 @@
 ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_), 
 																										syncTwoImage_(SyncPolicyTwoImage(5), colorSub_, depthSub_){
 	// Initialize ROS parameters
-	ROS_INFO("[Object detection Openvino]: Reading ROS parameters");
-	paramsSrv_ = nodePrivate_.advertiseService("params", &ObjectDetectionOpenvino::updateParams, this);
-
-	initialize();
+	getParams();
 
 	ROS_INFO_STREAM("[Object detection Openvino]: Loading Inference Engine" << InferenceEngine::GetInferenceEngineVersion());
 	ROS_INFO_STREAM("[Object detection Openvino]: Device info: " << core_.GetVersions(deviceTarget_));
@@ -187,7 +184,9 @@ ObjectDetectionOpenvino::~ObjectDetectionOpenvino(){
 }
 
 /* Update parameters of the node */
-bool ObjectDetectionOpenvino::updateParams(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res){
+void ObjectDetectionOpenvino::getParams(){
+	ROS_INFO("[Object detection Openvino]: Reading ROS parameters");
+
 	nodePrivate_.param<float>("model_thresh", thresh_, 0.3);
 	nodePrivate_.param<float>("model_iou_thresh", iouThresh_, 0.4);
 
@@ -206,8 +205,6 @@ bool ObjectDetectionOpenvino::updateParams(std_srvs::Empty::Request &req, std_sr
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
 	nodePrivate_.param<bool>("output_image", outputImage_, true);
-
-	return true;
 }
 
 /* Camera info Callback */

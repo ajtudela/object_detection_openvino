@@ -19,7 +19,6 @@
 
 // ROS
 #include <ros/ros.h>
-#include <std_srvs/Empty.h>
 #include <std_msgs/Header.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Vector3.h>
@@ -59,7 +58,6 @@ class ObjectDetectionOpenvino{
 	private:
 		// ROS related
 		ros::NodeHandle node_, nodePrivate_;
-		ros::ServiceServer paramsSrv_;
 		image_transport::ImageTransport imageTransport_;
 		image_transport::SubscriberFilter colorSub_, depthSub_;
 		image_transport::Publisher detectionColorPub_;
@@ -77,8 +75,7 @@ class ObjectDetectionOpenvino{
 		float fx_, fy_, cx_, cy_;
 		bool showFPS_, useDepth_, outputImage_;
 
-		void initialize() { std_srvs::Empty empt; updateParams(empt.request, empt.response); }
-		bool updateParams(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+		void getParams();
 		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
 		void oneImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg);
 		void twoImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::Image::ConstPtr depthImageMsg);
