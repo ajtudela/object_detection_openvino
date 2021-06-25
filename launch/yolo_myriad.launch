@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<arg name="info_topic"					default="/camera/camera_info"/>
+	<arg name="color_topic" 				default="/camera/color/image_raw"/>
+	<arg name="depth_topic" 				default=""/>
+
+	<node pkg="object_detection_openvino" type="object_detection_openvino" name="object_detection" output="screen">
+		<param name="info_topic"				value="$(arg info_topic)"/>
+		<param name="color_topic"				value="$(arg color_topic)"/>
+		<param name="depth_topic"				value="$(arg depth_topic)"/>
+		<param name="detection_image_topic"		value="image_raw"/>
+		<param name="detection_info_topic"		value="detection_info"/>
+		<param name="detections_topic"			value="detections"/>
+		<param name="model_thresh"				value="0.4"/>
+		<param name="model_iou_thresh"			value="0.4"/>
+		<param name="model_xml"					value="$(find object_detection_openvino)/models/frozen/1frozen_darknet_yolov3_model.xml"/>
+		<param name="model_bin"					value="$(find object_detection_openvino)/models/frozen/1frozen_darknet_yolov3_model.bin"/>
+		<param name="model_labels"				value="$(find object_detection_openvino)/models/frozen/1frozen_darknet_yolov3_model.labels"/>
+		<param name="model_type"				value="YOLO"/>
+		<param name="device_target"				value="MYRIAD"/>
+		<param name="show_fps"					value="false"/>
+		<param name="output_image"				value="true"/>
+	</node>
+</launch>
+

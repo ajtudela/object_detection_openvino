@@ -8,34 +8,15 @@ add_compile_options(-std=c++11)
 find_package(Boost REQUIRED)
 
 # OpenCV
-find_package(OpenCV 3 REQUIRED COMPONENTS opencv_core opencv_imgproc opencv_imgcodecs highgui QUIET)
-if(NOT(OpenCV_FOUND))
-    message(WARNING "OpenCV is disabled or not found.")
-    return()
-else()
-    include_directories(${OpenCV_INCLUDE_DIRS})
-endif()
+find_package(OpenCV 3 REQUIRED COMPONENTS core imgproc imgcodecs highgui QUIET)
 
-# NGraph
-find_package(ngraph REQUIRED PATHS "/opt/intel/openvino/deployment_tools/ngraph")
-if(NOT(ngraph_FOUND))
-    message(WARNING "ngraph is disabled or not found.")
-    return()
-else()
-  set (ngraph_INCLUDE_DIR /opt/intel/openvino/deployment_tools/ngraph/include)
-  include_directories ( ${ngraph_INCLUDE_DIR} )
-  link_libraries ( ${ngraph_LIBRARIES} )
-  message ( STATUS "ngraph include DIRECTORY: " ${ngraph_INCLUDE_DIR})
-  message ( STATUS "ngraph LIBRARIES: "${ngraph_LIBRARIES})
-endif()
-
-# InferenceEngine
-find_package(InferenceEngine 2.0 QUIET)
+# Ngraph and InferenceEngine
+find_package(ngraph REQUIRED)
+find_package(InferenceEngine 2.0 REQUIRED)
 if(NOT(InferenceEngine_FOUND))
     message(WARNING "InferenceEngine is disabled or not found.")
     return()
 else()
-    include_directories(${InferenceEngine_INCLUDE_DIRS})
     include_directories(${InferenceEngine_INCLUDE_DIRS}/../samples/cpp/common/)
 endif()
 
@@ -52,9 +33,7 @@ find_package(catkin REQUIRED COMPONENTS
     sensor_msgs
     cv_bridge
     image_transport
-    message_generation
     message_filters
-    visualization_msgs
     vision_msgs
 )
 
@@ -62,25 +41,6 @@ find_package(catkin REQUIRED COMPONENTS
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
-
-# Generate messages in the 'msg' folder
-add_message_files(
-	DIRECTORY msg
-	FILES
-	Detection2D.msg
-	Detection2DArray.msg
-	Detection3D.msg
-	Detection3DArray.msg
-)
-
-# Generate added messages and services with any dependencies listed here
-generate_messages( 
-	DEPENDENCIES
-	std_msgs
-	sensor_msgs
-	vision_msgs
-)
-
 
 ###################################
 ## catkin specific configuration ##
@@ -97,12 +57,10 @@ catkin_package(
         sensor_msgs
         cv_bridge
         image_transport
-        message_runtime
         message_filters
-        visualization_msgs
+        vision_msgs
     DEPENDS Boost
 )
-
 
 ###########
 ## Build ##
@@ -115,28 +73,23 @@ include_directories(
 	${Boost_INCLUDE_DIRS}
 )
 
-# Declare a C++ executable
-add_executable(${PROJECT_NAME}
-  src/objectDetectionOpenvino.cpp
-)
+# Declare a C++ executable 
+add_executable(${PROJECT_NAME} src/objectDetectionOpenvino.cpp)
 
 # Add cmake target dependencies of the executable
-#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
-    ngraph::ngraph
-    ${InferenceEngine_LIBRARIES} 
-    ${Boost_LIBRARIES}
+    PRIVATE 
+    ${InferenceEngine_LIBRARIES}
     ${OpenCV_LIBRARIES}
+    ${NGRAPH_LIBRARIES}
+    ${Boost_LIBRARIES}
     ${catkin_LIBRARIES}
 )
 
 if(TARGET IE::ie_cpu_extension)
-    target_link_libraries(${PROJECT_NAME} 
-    IE::ie_cpu_extension
-    )
+    target_link_libraries(${PROJECT_NAME} IE::ie_cpu_extension)
 endif()
 
 
