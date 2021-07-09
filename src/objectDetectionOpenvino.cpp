@@ -1,5 +1,5 @@
 /*
- * OBJECT DETECTION OPENVINO ROS NODE
+ * OBJECT DETECTION OPENVINO CLASS
  *
  * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
@@ -757,24 +757,5 @@ void ObjectDetectionOpenvino::parseYOLOV3Output(const InferenceEngine::CNNNetwor
 				objects.push_back(obj);
 			}
 		}
-	}
-}
-
-//----------------------------------------------
-
-/* Main */
-int main(int argc, char** argv){
-	ros::init(argc, argv, "object_detection_openvino");
-	ros::NodeHandle node("");
-	ros::NodeHandle node_private("~");
-
-	try{
-		ROS_INFO("[Object detection Openvino]: Initializing node");
-		ObjectDetectionOpenvino detector(node, node_private);
-		ros::spin();
-	}catch(const char* s){
-		ROS_FATAL_STREAM("[Object detection Openvino]: " << s);
-	}catch(...){
-		ROS_FATAL_STREAM("[Object detection Openvino]: Unexpected error");
 	}
 }

@@ -14,7 +14,7 @@ The source code is released under a [Apache license 2.0](LICENSE).
 
 **Author: Alberto Tudela<br />**
 
-The object_detection_openvino package has been tested under [ROS] Melodic on 18.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The object_detection_openvino package has been tested under [ROS] Melodic on [Ubuntu] 18.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 ## Installation
 
@@ -54,11 +54,12 @@ The weights file is very large and needs to be downloaded separately.
 
 Download the weights file to object_detection_openvino/models/ to install it.
 
-	wget https://gitlab.com/ajtudela/object_detection_openvino/-/blob/melodic-devel/models/downloadYoloModels.sh
+	cd object_detection_openvino/models
+	./downloadYoloModels.sh
 
 ## Nodes
 
-### object_detection_openvino
+### object_detection_openvino_node
 
 Perform object detection using OpenVino.
 
@@ -133,7 +134,13 @@ Perform object detection using OpenVino.
 
 	Output image of the detected objects.
 
+## Nodelet
 
+### object_detection_openvino_nodelet
+
+Same funtionality as the node mention above but converted as a nodelet for a vision pipeline. A nodelet manager is required.
+
+[Ubuntu]: https://ubuntu.com/
 [ROS]: http://www.ros.org
 [Rviz]: http://wiki.ros.org/rviz
 [sensor_msgs/Image]: http://docs.ros.org/api/sensor_msgs/html/msg/Image.html

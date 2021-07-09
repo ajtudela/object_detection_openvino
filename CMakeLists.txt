@@ -27,10 +27,10 @@ endif()
 # Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
     roscpp
-    roslib
+    nodelet
     std_msgs
-    geometry_msgs
     sensor_msgs
+    geometry_msgs
     cv_bridge
     image_transport
     message_filters
@@ -51,10 +51,10 @@ catkin_package(
     INCLUDE_DIRS include
     CATKIN_DEPENDS
         roscpp
-        roslib
+        nodelet
         std_msgs
-        geometry_msgs
         sensor_msgs
+        geometry_msgs
         cv_bridge
         image_transport
         message_filters
@@ -74,12 +74,26 @@ include_directories(
 )
 
 # Declare a C++ executable 
-add_executable(${PROJECT_NAME} src/objectDetectionOpenvino.cpp)
+add_executable(${PROJECT_NAME}_node
+				src/objectDetectionOpenvino.cpp
+				src/objectDetectionOpenvino_node.cpp)
 
-# Add cmake target dependencies of the executable
+# Declare a C++ C++ library
+add_library(${PROJECT_NAME}_nodelet
+				src/objectDetectionOpenvino.cpp
+				src/objectDetectionOpenvino_nodelet.cpp)
 
 # Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}_node
+    PRIVATE 
+    ${InferenceEngine_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${NGRAPH_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${catkin_LIBRARIES}
+)
+
+target_link_libraries(${PROJECT_NAME}_nodelet
     PRIVATE 
     ${InferenceEngine_LIBRARIES}
     ${OpenCV_LIBRARIES}
@@ -98,7 +112,7 @@ endif()
 #############
 
 # Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}_nodelet
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -110,6 +124,10 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
+
+install(FILES 
+  nodelet_plugins.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch

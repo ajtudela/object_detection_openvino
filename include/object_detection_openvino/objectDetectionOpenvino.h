@@ -1,5 +1,5 @@
 /*
- * OBJECT DETECTION OPENVINO ROS NODE
+ * OBJECT DETECTION OPENVINO CLASS
  *
  * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
