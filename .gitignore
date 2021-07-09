@@ -1,3 +1,7 @@
+# Models folder #
+###################
+models/
+
 # Compiled source #
 ###################
 *.com
@@ -25,10 +29,6 @@
 *.log
 *.sql
 *.sqlite
-*.labels
-*.bin
-*.mapping
-*.xml
 
 # OS generated files #
 ######################
