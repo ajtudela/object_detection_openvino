@@ -1,8 +1,5 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0.2)
 project(object_detection_openvino)
-
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
 
 # Boost
 find_package(Boost REQUIRED)
