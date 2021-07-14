@@ -70,15 +70,16 @@ include_directories(
 	${Boost_INCLUDE_DIRS}
 )
 
-# Declare a C++ executable 
-add_executable(${PROJECT_NAME}_node
-				src/objectDetectionOpenvino.cpp
-				src/objectDetectionOpenvino_node.cpp)
+# Set SOURCES
+set(SOURCES
+    src/objectDetectionOpenvino.cpp
+)
 
-# Declare a C++ C++ library
-add_library(${PROJECT_NAME}_nodelet
-				src/objectDetectionOpenvino.cpp
-				src/objectDetectionOpenvino_nodelet.cpp)
+# Declare a C++ executable 
+add_executable(${PROJECT_NAME}_node ${SOURCES} src/objectDetectionOpenvino_node.cpp)
+
+# Declare a C++ library
+add_library(${PROJECT_NAME}_nodelet ${SOURCES} src/objectDetectionOpenvino_nodelet.cpp)
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
