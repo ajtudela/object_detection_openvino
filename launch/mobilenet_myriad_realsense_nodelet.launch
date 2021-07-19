@@ -14,13 +14,14 @@
 		<arg name="enable_infra2"		value="false"/>
 		<arg name="enable_gyro"			value="false"/>
 		<arg name="enable_accel"		value="false"/>
+		<arg name="enable_pointcloud"   value="true"/>
 		<arg name="filters"				value="decimation,disparity,spatial,temporal,hole_filling"/>
 	</include>
 
 	<!-- Launch object detection -->
 	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionOpenvinoNodelet vision_manager" output="screen" >
-		<param name="info_topic"				value="/realsense/aligned_depth_to_color/camera_info"/>
 		<param name="color_topic"				value="/realsense/color/image_raw"/>
+		<param name="depth_info_topic"			value="/realsense/aligned_depth_to_color/camera_info"/>
 		<param name="depth_topic"				value="/realsense/aligned_depth_to_color/image_raw"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>

@@ -52,9 +52,9 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	else useDepth_ = true;
 
 	// Initialize subscribers, create sync policy and synchronizer
-	infoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(infoTopic_, 1, &ObjectDetectionOpenvino::infoCallback, this);
 	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
 	if(!useDepth_){
+		depthInfoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(depthInfoTopic_, 1, &ObjectDetectionOpenvino::depthInfoCallback, this);
 		colorSub_.registerCallback(boost::bind(&ObjectDetectionOpenvino::oneImageCallback, this,_1));
 	}else{
 		depthSub_.subscribe(imageTransport_, depthTopic_, 10);
@@ -172,8 +172,8 @@ ObjectDetectionOpenvino::~ObjectDetectionOpenvino(){
 	nodePrivate_.deleteParam("model_type");
 	nodePrivate_.deleteParam("device_target");
 
-	nodePrivate_.deleteParam("info_topic");
 	nodePrivate_.deleteParam("color_topic");
+	nodePrivate_.deleteParam("depth_info_topic");
 	nodePrivate_.deleteParam("depth_topic");
 	nodePrivate_.deleteParam("detection_image_topic");
 	nodePrivate_.deleteParam("detection_info_topic");
@@ -196,8 +196,8 @@ void ObjectDetectionOpenvino::getParams(){
 	nodePrivate_.param<std::string>("model_type", networkType_, "");
 	nodePrivate_.param<std::string>("device_target", deviceTarget_, "CPU");
 
-	nodePrivate_.param<std::string>("info_topic", infoTopic_, "/camera/info");
 	nodePrivate_.param<std::string>("color_topic", colorTopic_, "/camera/color/image_raw");
+	nodePrivate_.param<std::string>("depth_info_topic", depthInfoTopic_, "");
 	nodePrivate_.param<std::string>("depth_topic", depthTopic_, "");
 	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "image_raw");
 	nodePrivate_.param<std::string>("detection_info_topic", detectionInfoTopic_, "detection_info");
@@ -208,24 +208,14 @@ void ObjectDetectionOpenvino::getParams(){
 }
 
 /* Camera info Callback */
-void ObjectDetectionOpenvino::infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg){
-	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to camera info topic: %s", infoTopic_.c_str());
+void ObjectDetectionOpenvino::depthInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg){
+	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to camera info topic: %s", depthInfoTopic_.c_str());
 
 	// Read parameters of the camera
 	fx_ = infoMsg->K[0];
 	fy_ = infoMsg->K[4];
 	cx_ = infoMsg->K[2];
 	cy_ = infoMsg->K[5];
-
-	// Create info
-	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header = infoMsg->header;
-	detectionInfo.method = networkType_ + " detection with COCO database";
-	detectionInfo.database_location = labelFileName_;
-	detectionInfo.database_version = 0;
-
-	// Publish info
-	detectionInfoPub_.publish(detectionInfo);
 }
 
 /* Callback function for color image */
@@ -248,10 +238,9 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 	sensor_msgs::Image::ConstPtr colorImageMsg, depthImageMsg;
 	cv_bridge::CvImagePtr colorImageCv, depthImageCv;
 
-	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
-
 	// Note: Only infer object if there's any subscriber
-	if(detectionInfoPub_.getNumSubscribers() == 0 && detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
+	if(detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
+	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	// Read header
 	colorImageMsg = imageMsg[0];
@@ -411,6 +400,16 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 		}
 	}
 
+	// Create info
+	vision_msgs::VisionInfo detectionInfo;
+	detectionInfo.header = detections2D.header;
+	detectionInfo.method = networkType_ + " detection with COCO database";
+	detectionInfo.database_location = labelFileName_;
+	detectionInfo.database_version = 0;
+
+	// Publish info
+	detectionInfoPub_.publish(detectionInfo);
+
 	// Publish
 	if(outputImage_) publishImage(currFrame_);
 	if(!useDepth_){
@@ -527,7 +526,8 @@ vision_msgs::Detection3D ObjectDetectionOpenvino::createDetection3DMsg(cv_bridge
 	ROS_DEBUG("The depth of the bounding box center is %f", 0.001 * (float)depthImage->image.at<u_int16_t>( cv::Point((object.ymax + object.ymin) / 2.0, 
 															(object.xmax + object.xmin) / 2.0)));
 
-	// Extract 3d coordinates of the average value
+	// Inverse projection of the depth pixels to obtain 3d coordinates
+	// We using the average value
 	float avgPixelDepthX, avgPixelDepthY, avgPixelDepthZ;
 	avgPixelDepthZ = avg[0]/1000.0;
 	avgPixelDepthX = ((object.xmax + object.xmin) / 2.0 - cx_) * avgPixelDepthZ / fx_;

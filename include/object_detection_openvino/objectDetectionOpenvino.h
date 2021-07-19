@@ -61,7 +61,7 @@ class ObjectDetectionOpenvino{
 		image_transport::ImageTransport imageTransport_;
 		image_transport::SubscriberFilter colorSub_, depthSub_;
 		image_transport::Publisher detectionColorPub_;
-		ros::Subscriber infoSub_;
+		ros::Subscriber depthInfoSub_;
 		ros::Publisher detectionInfoPub_, detectionsPub_, markersPub_;
 
 		typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> SyncPolicyTwoImage;
@@ -69,14 +69,14 @@ class ObjectDetectionOpenvino{
 
 		std::string inputName_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, infoTopic_, colorTopic_, depthTopic_, detectionImageTopic_, detectionInfoTopic_, detectionsTopic_, deviceTarget_;
+		std::string colorFrameId_, colorTopic_, depthInfoTopic_, depthTopic_, detectionImageTopic_, detectionInfoTopic_, detectionsTopic_, deviceTarget_;
 		std::vector<std::string> labels_;
 
 		float fx_, fy_, cx_, cy_;
 		bool showFPS_, useDepth_, outputImage_;
 
 		void getParams();
-		void infoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
+		void depthInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
 		void oneImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg);
 		void twoImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::Image::ConstPtr depthImageMsg);
 		void cameraCallback(const std::vector<sensor_msgs::Image::ConstPtr>& imageMsg);
