@@ -54,9 +54,9 @@ ObjectDetectionOpenvino::ObjectDetectionOpenvino(ros::NodeHandle& node, ros::Nod
 	// Initialize subscribers, create sync policy and synchronizer
 	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
 	if(!useDepth_){
-		depthInfoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(depthInfoTopic_, 1, &ObjectDetectionOpenvino::depthInfoCallback, this);
 		colorSub_.registerCallback(boost::bind(&ObjectDetectionOpenvino::oneImageCallback, this,_1));
 	}else{
+		depthInfoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(depthInfoTopic_, 1, &ObjectDetectionOpenvino::depthInfoCallback, this);
 		depthSub_.subscribe(imageTransport_, depthTopic_, 10);
 		syncTwoImage_.connectInput(colorSub_, depthSub_);
 		syncTwoImage_.registerCallback(boost::bind(&ObjectDetectionOpenvino::twoImageCallback, this,_1,_2));
@@ -237,6 +237,7 @@ void ObjectDetectionOpenvino::twoImageCallback(sensor_msgs::Image::ConstPtr colo
 void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Image::ConstPtr>& imageMsg){
 	sensor_msgs::Image::ConstPtr colorImageMsg, depthImageMsg;
 	cv_bridge::CvImagePtr colorImageCv, depthImageCv;
+	int detectionId = 0;
 
 	// Note: Only infer object if there's any subscriber
 	if(detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
@@ -374,7 +375,6 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 				vision_msgs::Detection2D detection2D = createDetection2DMsg(object, detections2D.header);
 				detections2D.detections.push_back(detection2D);
 			}else{
-				int detectionId = 0;
 				// Create detection3D and push to array
 				vision_msgs::Detection3D detection3D = createDetection3DMsg(depthImageCv, object, detections2D.header);
 				detections3D.detections.push_back(detection3D);
@@ -397,6 +397,8 @@ void ObjectDetectionOpenvino::cameraCallback(const std::vector<sensor_msgs::Imag
 				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
 				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
 			}
+
+			detectionId++;
 		}
 	}
 
