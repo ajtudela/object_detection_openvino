@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
 	<name>object_detection_openvino</name>
-	<version>1.0.0</version>
+	<version>2.0.0</version>
 	<description>OpenVINO implementation of Darknet ROS (YoloV3) and Mobilenet-SSD networks to achieve realtime processing on x64 CPUs.</description>
 	<maintainer email="ajtudela@gmail.com">Alberto Tudela</maintainer>
 	<author email="ajtudela@gmail.com">Alberto Tudela</author>

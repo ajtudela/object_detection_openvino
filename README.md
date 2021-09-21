@@ -1,12 +1,16 @@
 # object_detection_openvino
 
+![ROS](https://img.shields.io/badge/ros-melodic-blue?style=for-the-badge&logo=ros&logoColor=white)
+![OpenCV](https://img.shields.io/badge/opencv-%23white.svg?style=for-the-badge&logo=opencv&logoColor=white)
+![License](https://img.shields.io/badge/license-Apache%202-blue?style=for-the-badge)
+
 ## Overview
 
 An implementation of YOLO and Mobilenet-SSD object detection with a ROS interface and enhanced processor utilization using OpenVINO model optimization tools. It can be use with any Myriad X, i.e.: Intel Neural Compute Stick 2.
 This package is designed on async api of [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit) and allows an easy setup for **object detection**.<br><br>
 If you provide a depth image (from an Intel RealSense Camera, for example) you can obtain 3d boxes and markers in [RViz].
 
-**Keywords:** ROS, OpenVino, RealSense, object_detection
+**Keywords:** ROS, OpenVino, RealSense, OpenCV, object_detection
 
 ### License
 
@@ -23,7 +27,9 @@ The object_detection_openvino package has been tested under [ROS] Melodic on [Ub
 #### Dependencies
 
 - [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
-- [Intel OpenVINO 2020.3.355](https://software.intel.com/en-us/openvino-toolkit) 
+- [Intel OpenVINO 2020.3.355](https://software.intel.com/en-us/openvino-toolkit) (toolkit for deep learning),
+- [OpenCV 3](https://opencv.org/) (Computer Vision library),
+- [Boost](https://www.boost.org/) (C++ source libraries)
 
 	sudo rosdep install --from-paths src
 
