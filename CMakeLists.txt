@@ -15,6 +15,7 @@ if(NOT(InferenceEngine_FOUND))
     return()
 else()
     include_directories(${InferenceEngine_INCLUDE_DIRS}/../samples/cpp/common/)
+    #include_directories(${InferenceEngine_INCLUDE_DIRS}/../samples/cpp/common/utils/include/)
 endif()
 
 if(TARGET IE::ie_cpu_extension)
@@ -72,14 +73,15 @@ include_directories(
 
 # Set SOURCES
 set(SOURCES
-    src/objectDetectionOpenvino.cpp
+    src/objectDetectionVPU.cpp
+    src/openvino.cpp
 )
 
 # Declare a C++ executable 
-add_executable(${PROJECT_NAME}_node ${SOURCES} src/objectDetectionOpenvino_node.cpp)
+add_executable(${PROJECT_NAME}_node ${SOURCES} src/objectDetectionVPU_node.cpp)
 
 # Declare a C++ library
-add_library(${PROJECT_NAME}_nodelet ${SOURCES} src/objectDetectionOpenvino_nodelet.cpp)
+add_library(${PROJECT_NAME}_nodelet ${SOURCES} src/objectDetectionVPU_nodelet.cpp)
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node

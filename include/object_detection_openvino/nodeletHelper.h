@@ -1,5 +1,5 @@
 /*
- * OBJECT DETECTION OPENVINO NODELET
+ * NODELET HELPER
  *
  * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
