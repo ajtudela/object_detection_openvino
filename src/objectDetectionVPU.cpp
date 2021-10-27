@@ -31,12 +31,12 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	// Initialize subscribers, create sync policy and synchronizer
 	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
 	if(!useDepth_){
-		colorSub_.registerCallback(boost::bind(&ObjectDetectionOpenvino::oneImageCallback, this,_1));
+		colorSub_.registerCallback(boost::bind(&ObjectDetectionVPU::oneImageCallback, this,_1));
 	}else{
-		depthInfoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(depthInfoTopic_, 1, &ObjectDetectionOpenvino::depthInfoCallback, this);
+		depthInfoSub_ = node_.subscribe<sensor_msgs::CameraInfo>(depthInfoTopic_, 1, &ObjectDetectionVPU::depthInfoCallback, this);
 		depthSub_.subscribe(imageTransport_, depthTopic_, 10);
 		syncTwoImage_.connectInput(colorSub_, depthSub_);
-		syncTwoImage_.registerCallback(boost::bind(&ObjectDetectionOpenvino::twoImageCallback, this,_1,_2));
+		syncTwoImage_.registerCallback(boost::bind(&ObjectDetectionVPU::twoImageCallback, this,_1,_2));
 	}
 
 	// Initialize publishers
@@ -55,8 +55,11 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	// Set network model
 	openvino_.setNetworkModel(modelFileName_, binFileName_, labelFileName_);
 
+	// Get labels
+	labels_ = openvino_.getLabels();
+
 	// Configuring input and output 
-	openvino_.configureInputOutput(networkType_);
+	openvino_.configureNetwork(networkType_);
 
 	// Load model to the device 
 	openvino_.loadModelToDevice(deviceTarget_);
@@ -171,12 +174,13 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 		ROS_ERROR("[Object detection Openvino]: cv_bridge exception: %s", e.what());
 		return;
 	}
+
 	const size_t colorHeight = (size_t) colorImageCv->image.size().height;
 	const size_t colorWidth  = (size_t) colorImageCv->image.size().width;
 
 	// Copy data from image to input blob
 	nextFrame_ = colorImageCv->image.clone();
-	frameToBlob(nextFrame_, asyncInferRequestNext_, inputName_, false);
+	openvino_.frameToNextInfer(nextFrame_, false);
 
 	/* Perform depth analysis */
 	if(useDepth_){
@@ -197,7 +201,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 	// Load network
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
 	auto t0 = std::chrono::high_resolution_clock::now();
-	asyncInferRequestNext_->StartAsync();
+	openvino_.startNextAsyncInferRequest();
 
 	if(openvino_.isDeviceReady()){
 		// Show FPS
@@ -224,7 +228,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 		}
 
 		// Get detection objects
-		std::vector<DetectionObject> objects = getDetectionObjects(iouThres_);
+		std::vector<DetectionObject> objects = openvino_.getDetectionObjects(colorHeight, colorWidth, iouThresh_);
 
 		/* Process objects */
 		for(auto &object: objects){
@@ -303,7 +307,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
 	nextFrame_ = cv::Mat();
-	asyncInferRequestCurr_.swap(asyncInferRequestNext_);
+	openvino_.swapAsyncInferRequest();
 }
 
 /* Show histogram of the image */
@@ -484,4 +488,17 @@ void ObjectDetectionVPU::publishImage(cv::Mat image){
 	outputImageMsg.image = image;
 
 	detectionColorPub_.publish(outputImageMsg.toImageMsg());
+}
+
+/* Get color of the class */
+int ObjectDetectionVPU::getColor(int c, int x, int max){
+	float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
+
+	float ratio = ((float)x/max)*5;
+	int i = floor(ratio);
+	int j = ceil(ratio);
+	ratio -= i;
+	float r = (1-ratio) * colors[i][c] + ratio*colors[j][c];
+
+	return floor(r*255);
 }

@@ -9,11 +9,16 @@
  *
  */
 
+// C++
 #include <iostream>
 #include <iterator>
 #include <boost/filesystem.hpp>
 
+// Openvino
 #include <ngraph/ngraph.hpp>
+
+// ROS
+#include <ros/ros.h>
 
 #include "object_detection_openvino/openvino.h"
 
@@ -60,12 +65,14 @@ void Openvino::setNetworkModel(std::string modelFileName, std::string binFileNam
 }
 
 /* Configuring inputs and outputs */
-void Openvino::configureInputOutput(std::string networkType){
+void Openvino::configureNetwork(std::string networkType){
+	networkType_ = networkType;
+
 	// Prepare input blobs
 	ROS_INFO("[Object detection VPU]: Checking that the inputs are as expected");
 
 	inputInfo_ = InferenceEngine::InputsDataMap(cnnNetwork_.getInputsInfo());
-	if(networkType == "YOLO"){
+	if(networkType_ == "YOLO"){
 		if(inputInfo_.size() != 1){
 			ROS_FATAL("[Object detection VPU]: Only accepts networks that have only one input");
 			ros::shutdown();
@@ -74,7 +81,7 @@ void Openvino::configureInputOutput(std::string networkType){
 		inputName_ = inputInfo_.begin()->first;
 		input->setPrecision(InferenceEngine::Precision::U8);
 		input->getInputData()->setLayout(InferenceEngine::Layout::NCHW);
-	}else if(networkType == "SSD"){
+	}else if(networkType_ == "SSD"){
 		if(inputInfo_.size() != 1 && inputInfo_.size() != 2 ){
 			ROS_FATAL("[Object detection VPU]: Only accepts networks with 1 or 2 inputs");
 			ros::shutdown();
@@ -107,7 +114,7 @@ void Openvino::configureInputOutput(std::string networkType){
 	// Prepare output blobs
 	ROS_INFO("[Object detection VPU]: Checking that the outputs are as expected");
 	outputInfo_ = InferenceEngine::OutputsDataMap(cnnNetwork_.getOutputsInfo());
-	if(networkType == "YOLO"){
+	if(networkType_ == "YOLO"){
 		if(outputInfo_.size() != 3 && outputInfo_.size() != 2){
 			ROS_FATAL("[Object detection VPU]: Only accepts networks with three (YOLO) or two (tiny-YOLO) outputs");
 			ros::shutdown();
@@ -117,7 +124,7 @@ void Openvino::configureInputOutput(std::string networkType){
 			output.second->setPrecision(InferenceEngine::Precision::FP32);
 			output.second->setLayout(InferenceEngine::Layout::NCHW);
 		}
-	}else if(networkType == "SSD"){
+	}else if(networkType_ == "SSD"){
 		if(outputInfo_.size() != 1){
 			throw std::logic_error("[Object detection VPU]: Only accepts networks with one output");
 		}
@@ -142,13 +149,28 @@ void Openvino::createAsyncInferRequest(){
 	asyncInferRequestNext_ = infNetwork_.CreateInferRequestPtr();
 }
 
+/* Start next inference request */
+void Openvino::startNextAsyncInferRequest(){
+	asyncInferRequestNext_->StartAsync();
+}
+
+/* Swap inference request images */
+void Openvino::swapAsyncInferRequest(){
+	asyncInferRequestCurr_.swap(asyncInferRequestNext_);
+}
+
 /* Check if device is ready */
 bool Openvino::isDeviceReady(){
 	return InferenceEngine::OK == asyncInferRequestCurr_->Wait(InferenceEngine::IInferRequest::WaitMode::RESULT_READY);
 }
 
+/* Get labels */
+std::vector<std::string> Openvino::getLabels(){
+	return labels_;
+}
+
 /* Get detection objects */
-std::vector<DetectionObject> Openvino::getDetectionObjects(float iouThreshold){
+std::vector<DetectionObject> Openvino::getDetectionObjects(size_t height, size_t width, float iouThreshold){
 	// Processing output blobs of the CURRENT request
 	const InferenceEngine::TensorDesc& inputDesc = inputInfo_.begin()->second.get()->getTensorDesc();
 	unsigned long resizedImgH = getTensorHeight(inputDesc);
@@ -160,8 +182,8 @@ std::vector<DetectionObject> Openvino::getDetectionObjects(float iouThreshold){
 		auto outputName = output.first;
 		InferenceEngine::Blob::Ptr blob = asyncInferRequestCurr_->GetBlob(outputName);
 
-		if(networkType_ == "YOLO") parseYOLOV3Output(cnnNetwork_, outputName, blob, resizedImgH, resizedImgW, colorHeight, colorWidth, thresh_, objects);
-		else if(networkType_ == "SSD") parseSSDOutput(blob, colorHeight, colorWidth, thresh_, objects);
+		if(networkType_ == "YOLO") parseYOLOV3Output(cnnNetwork_, outputName, blob, resizedImgH, resizedImgW, height, width, thresh_, objects);
+		else if(networkType_ == "SSD") parseSSDOutput(blob, height, width, thresh_, objects);
 	}
 
 	// Filtering overlapping boxes
@@ -179,19 +201,9 @@ std::vector<DetectionObject> Openvino::getDetectionObjects(float iouThreshold){
 	return objects;
 }
 
-
-
-/* Get color of the class */
-int Openvino::getColor(int c, int x, int max){
-	float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
-
-	float ratio = ((float)x/max)*5;
-	int i = floor(ratio);
-	int j = ceil(ratio);
-	ratio -= i;
-	float r = (1-ratio) * colors[i][c] + ratio*colors[j][c];
-
-	return floor(r*255);
+/* Convert frame to Next inference */
+void Openvino::frameToNextInfer(const cv::Mat &frame, bool autoResize){
+	frameToBlob(frame, asyncInferRequestNext_, inputName_, autoResize);
 }
 
 /* Index for the entry */

@@ -60,15 +60,16 @@ class ObjectDetectionVPU{
 
 		Openvino openvino_;
 		float fx_, fy_, cx_, cy_;
-		float iouThres_;
+		float thresh_, iouThresh_;
 		bool showFPS_, useDepth_, outputImage_;
-		std::string networkType_;
+		std::string deviceTarget_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, colorTopic_, depthInfoTopic_, depthTopic_, detectionImageTopic_, detectionInfoTopic_, detectionsTopic_, deviceTarget_;
+		std::string colorFrameId_, colorTopic_, depthInfoTopic_, depthTopic_, detectionImageTopic_, detectionInfoTopic_, detectionsTopic_;
+		cv::Mat nextFrame_, currFrame_;
 		std::vector<std::string> labels_;
 
-
 		void getParams();
+		int getColor(int c, int x, int max);
 		void depthInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& infoMsg);
 		void oneImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg);
 		void twoImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::Image::ConstPtr depthImageMsg);
