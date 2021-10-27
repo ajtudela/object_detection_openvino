@@ -148,7 +148,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 
 	// Note: Only infer object if there's any subscriber
 	if(detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
-	ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to color image topic: %s", colorTopic_.c_str());
+	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	// Read header
 	colorImageMsg = imageMsg[0];
@@ -171,7 +171,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 	try{
 		colorImageCv = cv_bridge::toCvCopy(colorImageMsg, sensor_msgs::image_encodings::BGR8);
 	}catch(cv_bridge::Exception& e){
-		ROS_ERROR("[Object detection Openvino]: cv_bridge exception: %s", e.what());
+		ROS_ERROR("[Object detection VPU]: cv_bridge exception: %s", e.what());
 		return;
 	}
 
@@ -184,7 +184,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 
 	/* Perform depth analysis */
 	if(useDepth_){
-		ROS_INFO_ONCE("[Object detection Openvino]: Subscribed to depth image topic: %s", depthTopic_.c_str());
+		ROS_INFO_ONCE("[Object detection VPU]: Subscribed to depth image topic: %s", depthTopic_.c_str());
 
 		// Read header
 		depthImageMsg = imageMsg[1];
@@ -193,7 +193,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 		try{
 			depthImageCv = cv_bridge::toCvCopy(depthImageMsg, sensor_msgs::image_encodings::TYPE_16UC1);
 		}catch(cv_bridge::Exception& e){
-			ROS_ERROR("[Object detection Openvino]: cv_bridge exception: %s", e.what());
+			ROS_ERROR("[Object detection VPU]: cv_bridge exception: %s", e.what());
 			return;
 		}
 	}
@@ -238,7 +238,7 @@ void ObjectDetectionVPU::cameraCallback(const std::vector<sensor_msgs::Image::Co
 			auto label = object.classId;
 			float confidence = object.confidence;
 
-			ROS_DEBUG("[Object detection Openvino]: %s tag (%.2f%%)", this->labels_[label].c_str(), confidence*100);
+			ROS_DEBUG("[Object detection VPU]: %s tag (%.2f%%)", this->labels_[label].c_str(), confidence*100);
 
 			// Improve bounding box
 			object.xmin = object.xmin < 0 ? 0 : object.xmin;
@@ -407,7 +407,7 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(cv_bridge::CvI
 	// If you want to see the histogram of the depth image uncomment next line
 	//showHistogram(subDepthSc, cv::mean(subDepthSc));
 
-	ROS_DEBUG("The depth of the bounding box center is %f", 0.001 * (float)depthImage->image.at<u_int16_t>( cv::Point((object.ymax + object.ymin) / 2.0, 
+	ROS_DEBUG("[Object detection VPU]: The depth of the bounding box center is %f", 0.001 * (float)depthImage->image.at<u_int16_t>( cv::Point((object.ymax + object.ymin) / 2.0, 
 															(object.xmax + object.xmin) / 2.0)));
 
 	// Inverse projection of the depth pixels to obtain 3d coordinates
