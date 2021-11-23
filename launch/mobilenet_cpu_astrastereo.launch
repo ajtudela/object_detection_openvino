@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<!-- Launch Orbbec Astra Stereo S USB 3.0 -->
+	<include file="$(find astra_camera)/launch/stereo_s_u3.launch">
+		<arg name="camera" 							value="astra"/>
+		<arg name="color_depth_synchronization" 	value="true" />
+	</include>
+	
+	<!-- Launch object detection -->
+	<include file="$(find object_detection_openvino)/launch/mobilenet_cpu.launch">
+		<arg name="color_topic"			value="/astra/rgb/image_raw"/>
+		<!--<arg name="depth_info_topic"	value="/astra/depth_registered/camera_info"/>
+		<arg name="depth_topic"			value="/astra/depth_registered/image_raw"/>-->
+	</include>
+</launch>
+

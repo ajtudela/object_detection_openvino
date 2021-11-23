@@ -1,6 +1,10 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2.0.1 (23-11-2021)
+------------------
+* Added Orbbec Astra Stereo S USB 3.0 launch file.
+
 2.0.0 (13-09-2021)
 ------------------
 * Create CHANGELOG.rst.
