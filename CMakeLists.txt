@@ -33,6 +33,8 @@ find_package(catkin REQUIRED COMPONENTS
     image_transport
     message_filters
     vision_msgs
+    pcl_ros
+    pcl_conversions
 )
 
 
@@ -57,6 +59,8 @@ catkin_package(
         image_transport
         message_filters
         vision_msgs
+        pcl_ros
+        pcl_conversions
     DEPENDS Boost
 )
 
