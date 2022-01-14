@@ -1,6 +1,14 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+3.0.0 (14-01-2022)
+------------------
+* Use pointcloud instead of depth topic to increase accuracy.
+* Split openvino into a different class to improve code readibility.
+* Publish both detections2D and detections3D when using depth instead of detections3D only.
+* Change frame of detections to camera frame.
+
 2.0.1 (23-11-2021)
 ------------------
 * Added Orbbec Astra Stereo S USB 3.0 launch file.

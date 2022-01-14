@@ -8,7 +8,7 @@
 
 An implementation of YOLO and Mobilenet-SSD object detection with a ROS interface and enhanced processor utilization using OpenVINO model optimization tools. It can be use with any Myriad X, i.e.: Intel Neural Compute Stick 2.
 This package is designed on async api of [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit) and allows an easy setup for **object detection**.<br><br>
-If you provide a depth image (from an Intel RealSense Camera, for example) you can obtain 3d boxes and markers in [RViz].
+If you provide a pointcloud image (from an Intel RealSense Camera, for example) you can obtain 3d boxes and markers in [RViz].
 
 **Keywords:** ROS, OpenVino, RealSense, OpenCV, object_detection
 
@@ -76,13 +76,9 @@ Perform object detection using OpenVino.
 
 	Color image topic where detection will be performed.
 
-* **`/camera/depth/image_raw`** ([sensor_msgs/Image])
+* **`/camera/color/points`** ([sensor_msgs/PointCloud2]) (Optional)
 
-	Depth image topic for extracting 3d coordinates. (Optional)
-
-* **`/camera/info`** ([sensor_msgs/CameraInfo])
-
-	Topic for the camera information.
+	Registered pointcloud topic. Is this topic is not empty, it will extract a 3d bounding box of the objects detected. This pointcloud must be ordered.
 
 #### Published Topics
 
@@ -94,15 +90,23 @@ Perform object detection using OpenVino.
 
 	Provides meta-information about the detection pipeline: method, database location,...
 
-* **`detections`** ([vision_msgs/Detection2DArray] or [vision_msgs/Detection3DArray])
+* **`detections2d`** ([vision_msgs/Detection2DArray])
 
 	List with the detected objects in the image.
+
+* **`detections3d`** ([vision_msgs/Detection3DArray])
+
+	List with the detected objects in the image if pointcloud is enabled.
 
 * **`markers`** ([visualization_msgs/MarkerArray])
 
 	3d markers of the objects detected.
 
 #### Parameters
+
+* **`camera_frame`** (string, default: "camera_link")
+
+	Frame that all measurements are based on.
 
 * **`model_thresh`** (float, default: 0.3)
 
@@ -150,6 +154,7 @@ Same funtionality as the node mention above but converted as a nodelet for a vis
 [ROS]: http://www.ros.org
 [Rviz]: http://wiki.ros.org/rviz
 [sensor_msgs/Image]: http://docs.ros.org/api/sensor_msgs/html/msg/Image.html
+[sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [sensor_msgs/CameraInfo]: http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html
 [vision_msgs/VisionInfo]: http://docs.ros.org/api/vision_msgs/html/msg/VisionInfo.html
 [vision_msgs/Detection2DArray]: http://docs.ros.org/api/vision_msgs/html/msg/Detection2DArray.html

@@ -1,32 +1,24 @@
 <?xml version="1.0"?>
 <package format="2">
 	<name>object_detection_openvino</name>
-	<version>2.0.1</version>
+	<version>3.0.0</version>
 	<description>OpenVINO implementation of Darknet ROS (YoloV3) and Mobilenet-SSD networks to achieve realtime processing on x64 CPUs.</description>
 	<maintainer email="ajtudela@gmail.com">Alberto Tudela</maintainer>
 	<author email="ajtudela@gmail.com">Alberto Tudela</author>
 	<license>BSD</license>
 	<buildtool_depend>catkin</buildtool_depend>
-	<build_depend>boost</build_depend>
-	<build_depend>roscpp</build_depend>
-	<build_depend>nodelet</build_depend>
-	<build_depend>std_msgs</build_depend>
-	<build_depend>sensor_msgs</build_depend>
-	<build_depend>geometry_msgs</build_depend>
-	<build_depend>image_transport</build_depend>
-	<build_depend>message_filters</build_depend>
-	<build_depend>cv_bridge</build_depend>
-	<build_depend>vision_msgs</build_depend>
-	<exec_depend>boost</exec_depend>
-	<exec_depend>roscpp</exec_depend>
-	<exec_depend>nodelet</exec_depend>
-	<exec_depend>std_msgs</exec_depend>
-	<exec_depend>sensor_msgs</exec_depend>
-	<exec_depend>geometry_msgs</exec_depend>
-	<exec_depend>image_transport</exec_depend>
-	<exec_depend>message_filters</exec_depend>
-	<exec_depend>cv_bridge</exec_depend>
-	<exec_depend>vision_msgs</exec_depend>
+	<depend>boost</depend>
+	<depend>roscpp</depend>
+	<depend>nodelet</depend>
+	<depend>std_msgs</depend>
+	<depend>sensor_msgs</depend>
+	<depend>geometry_msgs</depend>
+	<depend>image_transport</depend>
+	<depend>message_filters</depend>
+	<depend>cv_bridge</depend>
+	<depend>vision_msgs</depend>
+	<depend>pcl_ros</depend>
+	<depend>pcl_conversions</depend>
 	<export>
 		<nodelet plugin="${prefix}/nodelet_plugins.xml" />
 	</export>

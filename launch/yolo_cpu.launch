@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
+	<arg name="camera_frame" 				default="camera_link"/>
 	<arg name="color_topic" 				default="/camera/color/image_raw"/>
-	<arg name="depth_info_topic"			default="/camera/depth/camera_info"/>
-	<arg name="depth_topic" 				default=""/>
+	<arg name="points_topic" 				default=""/>
 
 	<node pkg="object_detection_openvino" type="object_detection_openvino_node" name="object_detection" output="screen">
+		<param name="camera_frame"				value="$(arg camera_frame)"/>
 		<param name="color_topic"				value="$(arg color_topic)"/>
-		<param name="depth_info_topic"			value="$(arg depth_info_topic)"/>
-		<param name="depth_topic"				value="$(arg depth_topic)"/>
+		<param name="points_topic"				value="$(arg points_topic)"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
-		<param name="detections_topic"			value="detections"/>
+		<param name="detections2d_topic"		value="detections2d"/>
+		<param name="detections3d_topic"		value="detections3d"/>
 		<param name="model_thresh"				value="0.4"/>
 		<param name="model_iou_thresh"			value="0.4"/>
 		<param name="model_xml"					value="$(find object_detection_openvino)/models/frozen/1frozen_darknet_yolov3_model.xml"/>
