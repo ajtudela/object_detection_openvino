@@ -1,6 +1,12 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+3.0.0 (14-01-2022)
+------------------
+* Use pointcloud instead of depth topic to increase accuracy.
+* Split openvino into a different class to improve code readibility.
+
 2.0.0 (13-09-2021)
 ------------------
 * Create CHANGELOG.rst.

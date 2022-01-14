@@ -15,14 +15,15 @@
 		<arg name="enable_gyro"			value="false"/>
 		<arg name="enable_accel"		value="false"/>
 		<arg name="enable_pointcloud"   value="true"/>
-		<arg name="filters"				value="decimation,disparity,spatial,temporal,hole_filling"/>
+		<arg name="ordered_pc" 			value="true"/>
+		<arg name="filters"				value="decimation,hdr_merge,disparity,spatial,temporal"/>
+		<arg name="clip_distance" 		value="4"/>
 	</include>
 
 	<!-- Launch object detection -->
 	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet vision_manager" output="screen" >
 		<param name="color_topic"				value="/realsense/color/image_raw"/>
-		<param name="depth_info_topic"			value="/realsense/aligned_depth_to_color/camera_info"/>
-		<param name="depth_topic"				value="/realsense/aligned_depth_to_color/image_raw"/>
+		<param name="points_topic"				value="/realsense/depth/color/points"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
 		<param name="detections_topic"			value="detections"/>
