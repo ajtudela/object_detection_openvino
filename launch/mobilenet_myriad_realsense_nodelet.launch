@@ -15,7 +15,9 @@
 		<arg name="enable_gyro"			value="false"/>
 		<arg name="enable_accel"		value="false"/>
 		<arg name="enable_pointcloud"   value="true"/>
-		<arg name="filters"				value="decimation,disparity,spatial,temporal,hole_filling"/>
+		<arg name="ordered_pc" 			value="true"/>
+		<arg name="filters"				value="decimation,hdr_merge,disparity,spatial,temporal"/>
+		<arg name="clip_distance" 		value="4"/>
 	</include>
 
 	<!-- Launch object detection -->

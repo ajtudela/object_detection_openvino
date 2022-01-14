@@ -13,6 +13,7 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/filters/crop_box.h>
 #include <sensor_msgs/image_encodings.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <vision_msgs/VisionInfo.h>
@@ -291,12 +292,12 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 	try{
 		pcl_ros::transformPointCloud(colorFrameId_, *pointsMsg, localCloudPC2, tfListener_);
 	}catch(tf::TransformException& ex){
-		ROS_WARN_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
+		ROS_ERROR_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
 		return;
 	}
 	// Convert to PCL
-	pcloud::Ptr localCloucPCLPtr(new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::fromROSMsg(localCloudPC2, *localCloucPCLPtr);
+	pcloud::Ptr localCloudPCLPtr(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::fromROSMsg(localCloudPC2, *localCloudPCLPtr);
 
 	// Load network
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
@@ -354,14 +355,14 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 			colorRGB[2] = getColor(0, offset, COCO_CLASSES);
 
 			// Create detection3D and push to array
-			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloucPCLPtr, object, detections2D.header);
-			//detections3D.detections.push_back(detection3D);
+			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections2D.header);
+			detections3D.detections.push_back(detection3D);
 
 			// Create markers
-			/*visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox.center, detection3D.bbox.size, colorRGB, detections2D.header);
+			visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections2D.header);
 			visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections2D.header);
 			markerArray.markers.push_back(vizMarker);
-			markerArray.markers.push_back(labelMarker);*/
+			markerArray.markers.push_back(labelMarker);
 
 			/* Image */
 			if(outputImage_){
@@ -389,9 +390,8 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Publish detections and markers
 	if(outputImage_) publishImage(currFrame_);
-	/*detectionsPub_.publish(detections3D);
+	detectionsPub_.publish(detections3D);
 	markersPub_.publish(markerArray);
-	markerArray.markers.clear();*/
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
@@ -470,15 +470,11 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	centerX = (object.xmax + object.xmin) / 2;
 	centerY = (object.ymax + object.ymin) / 2;
 
-	/*int pclIndex = centerX + (centerY * cloudPC2.width);
-	std::cout<<"centerX"<<centerX<<std::endl;
-	std::cout<<"centerY"<<centerY<<std::endl;
-	std::cout<<"width"<<cloudPC2.width<<std::endl;
-	std::cout<<"pclIndex"<<pclIndex<<std::endl;
-	pcl::PointXYZRGB centerPoint =  cloudPCL->at(pclIndex);
+	int pclIndex = centerX + (centerY * cloudPC2.width);
+	pcl::PointXYZRGB centerPoint = cloudPCL->at(pclIndex);
 
-	if(std::isnan(centerPoint.x)) return detection3D;*/
-/*
+	if(std::isnan(centerPoint.x)) return detection3D;
+
 	// Calculate the bounding box
 	float maxX, minX, maxY, minY, maxZ, minZ;
 	maxX = maxY = maxZ = -std::numeric_limits<float>::max();
@@ -486,12 +482,11 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 
 	for (int i = object.xmin; i < object.xmax; i++){
 		for (int j = object.ymin; j < object.ymax; j++){
-			pclIndex = i + (j* cloudPC2.width);
+			pclIndex = i + (j * cloudPC2.width);
 			pcl::PointXYZRGB point =  cloudPCL->at(pclIndex);
 
 			if (std::isnan(point.x)) continue;
-
-			//if (fabs(point.x - center_point.x) > mininum_detection_thereshold_)	continue;
+			if (fabs(point.x - centerPoint.x) > thresh_) continue;
 
 			maxX = std::max(point.x, maxX);
 			maxY = std::max(point.y, maxY);
@@ -514,13 +509,24 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	detection3D.bbox.size.y = maxY - minY;
 	detection3D.bbox.size.z = maxZ - minZ;
 
-	// TODO: The 3D data that generated these results
+	// The 3D data that generated these results:
+	// Cropping the cloud
+	pcl::CropBox<pcl::PointXYZRGB> boxFilter;
+	pcloud::Ptr croppedCloudPCLPtr(new pcl::PointCloud<pcl::PointXYZRGB>);
+	boxFilter.setMin(Eigen::Vector4f(minX, minY, minZ, 1.0));
+	boxFilter.setMax(Eigen::Vector4f(maxX, maxY, maxZ, 1.0));
+	boxFilter.setInputCloud(cloudPCL);
+	boxFilter.filter(*croppedCloudPCLPtr);
+	// Convert to sensor_msgs
+	sensor_msgs::PointCloud2 croppedCloudPC2;
+	pcl::toROSMsg(*croppedCloudPCLPtr, croppedCloudPC2);
+	detection3D.source_cloud = croppedCloudPC2;
 
-	return detection3D;*/
+	return detection3D;
 }
 
 /* Create 3d Bounding Box for the object */
-visualization_msgs::Marker ObjectDetectionVPU::createBBox3dMarker(int id, geometry_msgs::Pose center, geometry_msgs::Vector3 size, float colorRGB[3], std_msgs::Header header){
+visualization_msgs::Marker ObjectDetectionVPU::createBBox3dMarker(int id, vision_msgs::BoundingBox3D bbox, float colorRGB[3], std_msgs::Header header){
 	visualization_msgs::Marker marker;
 	marker.header = header;
 	marker.ns = "boundingBox3d";
@@ -528,8 +534,8 @@ visualization_msgs::Marker ObjectDetectionVPU::createBBox3dMarker(int id, geomet
 	marker.type = visualization_msgs::Marker::CUBE;
 	marker.action = visualization_msgs::Marker::ADD;
 	marker.lifetime = ros::Duration(0.15);
-	marker.pose = center;
-	marker.scale = size;
+	marker.pose = bbox.center;
+	marker.scale = bbox.size;
 	marker.color.r = colorRGB[0] / 255.0;
 	marker.color.g = colorRGB[1] / 255.0;
 	marker.color.b = colorRGB[2] / 255.0;

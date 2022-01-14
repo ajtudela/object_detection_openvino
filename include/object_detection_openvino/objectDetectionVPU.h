@@ -82,7 +82,7 @@ class ObjectDetectionVPU{
 		void showHistogram(cv::Mat image, cv::Scalar mean);
 		vision_msgs::Detection2D createDetection2DMsg(DetectionObject object, std_msgs::Header header);
 		vision_msgs::Detection3D createDetection3DMsg(sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, DetectionObject object, std_msgs::Header header);
-		visualization_msgs::Marker createBBox3dMarker(int id, geometry_msgs::Pose center, geometry_msgs::Vector3 size, float colorRGB[3], std_msgs::Header header);
+		visualization_msgs::Marker createBBox3dMarker(int id, vision_msgs::BoundingBox3D bbox, float colorRGB[3], std_msgs::Header header);
 		visualization_msgs::Marker createLabel3dMarker(int id, std::string label, geometry_msgs::Pose pose, float colorRGB[3], std_msgs::Header header);
 		void publishImage(cv::Mat image);
 };
