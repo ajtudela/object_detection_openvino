@@ -1,7 +1,7 @@
 /*
  * OBJECT DETECTION VPU CLASS
  *
- * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
+ * Copyright (c) 2020-2022 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
  * This file is part of object_detection_openvino project.
  * 
