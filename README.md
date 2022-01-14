@@ -90,11 +90,11 @@ Perform object detection using OpenVino.
 
 	Provides meta-information about the detection pipeline: method, database location,...
 
-* **`detections2d`** ([vision_msgs/Detection2DArray] 
+* **`detections2d`** ([vision_msgs/Detection2DArray])
 
 	List with the detected objects in the image.
 
-* **`detections3d`** ([vision_msgs/Detection3DArray] 
+* **`detections3d`** ([vision_msgs/Detection3DArray])
 
 	List with the detected objects in the image if pointcloud is enabled.
 
@@ -103,6 +103,10 @@ Perform object detection using OpenVino.
 	3d markers of the objects detected.
 
 #### Parameters
+
+* **`camera_frame`** (string, default: "camera_link")
+
+	Frame that all measurements are based on.
 
 * **`model_thresh`** (float, default: 0.3)
 

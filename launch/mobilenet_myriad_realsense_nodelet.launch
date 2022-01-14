@@ -22,6 +22,7 @@
 
 	<!-- Launch object detection -->
 	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet vision_manager" output="screen" >
+		<param name="camera_frame"				value="realsense_link"/>
 		<param name="color_topic"				value="/realsense/color/image_raw"/>
 		<param name="points_topic"				value="/realsense/depth/color/points"/>
 		<param name="detection_image_topic"		value="image_raw"/>

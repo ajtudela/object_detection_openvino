@@ -71,7 +71,8 @@ class ObjectDetectionVPU{
 		bool showFPS_, useDepth_, outputImage_;
 		std::string deviceTarget_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, colorTopic_, pointCloudTopic_, detectionImageTopic_, detectionInfoTopic_, detections2DTopic_, detections3DTopic_;
+		std::string colorFrameId_, cameraFrameId_;
+		std::string colorTopic_, pointCloudTopic_, detectionImageTopic_, detectionInfoTopic_, detections2DTopic_, detections3DTopic_;
 		cv::Mat nextFrame_, currFrame_;
 		std::vector<std::string> labels_;
 

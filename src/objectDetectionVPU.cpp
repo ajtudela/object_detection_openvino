@@ -83,6 +83,7 @@ ObjectDetectionVPU::~ObjectDetectionVPU(){
 	nodePrivate_.deleteParam("model_type");
 	nodePrivate_.deleteParam("device_target");
 
+	nodePrivate_.deleteParam("camera_frame");
 	nodePrivate_.deleteParam("color_topic");
 	nodePrivate_.deleteParam("points_topic");
 	nodePrivate_.deleteParam("detection_image_topic");
@@ -107,6 +108,7 @@ void ObjectDetectionVPU::getParams(){
 	nodePrivate_.param<std::string>("model_type", networkType_, "");
 	nodePrivate_.param<std::string>("device_target", deviceTarget_, "CPU");
 
+	nodePrivate_.param<std::string>("camera_frame", cameraFrameId_, "camera_link");
 	nodePrivate_.param<std::string>("color_topic", colorTopic_, "/camera/color/image_raw");
 	nodePrivate_.param<std::string>("points_topic", pointCloudTopic_, "");
 	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "image_raw");
@@ -132,7 +134,7 @@ void ObjectDetectionVPU::colorImageCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Create arrays to publish and format headers
 	vision_msgs::Detection2DArray detections2D;
-	detections2D.header.frame_id = colorFrameId_;
+	detections2D.header.frame_id = cameraFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
 
 	visualization_msgs::MarkerArray markerArray;
@@ -254,7 +256,7 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Note: Only infer object if there's any subscriber
 	if(detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
-		&& detections3DPub_.getNumSubscribers() == 0 && markersPub_..getNumSubscribers() == 0) return;
+		&& detections3DPub_.getNumSubscribers() == 0 && markersPub_.getNumSubscribers() == 0) return;
 	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	// Read header
@@ -262,11 +264,11 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Create arrays to publish and format headers
 	vision_msgs::Detection2DArray detections2D;
-	detections2D.header.frame_id = colorFrameId_;
+	detections2D.header.frame_id = cameraFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
 
 	vision_msgs::Detection3DArray detections3D;
-	detections3D.header.frame_id = colorFrameId_;
+	detections3D.header.frame_id = cameraFrameId_;
 	detections3D.header.stamp = colorImageMsg->header.stamp;
 
 	visualization_msgs::MarkerArray markerArray;
@@ -293,7 +295,7 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 	// Transform to color frame
 	sensor_msgs::PointCloud2 localCloudPC2;
 	try{
-		pcl_ros::transformPointCloud(colorFrameId_, *pointsMsg, localCloudPC2, tfListener_);
+		pcl_ros::transformPointCloud(cameraFrameId_, *pointsMsg, localCloudPC2, tfListener_);
 	}catch(tf::TransformException& ex){
 		ROS_ERROR_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
 		return;
@@ -449,7 +451,8 @@ vision_msgs::Detection2D ObjectDetectionVPU::createDetection2DMsg(DetectionObjec
 	// The 2D data that generated these results
 	cv::Mat croppedImage = currFrame_(cv::Rect(object.xmin, object.ymin, object.xmax - object.xmin, object.ymax - object.ymin));
 
-	detection2D.source_img.header = detection2D.header;
+	detection2D.source_img.header.frame_id = colorFrameId_;
+	detection2D.source_img.header.stamp = header.stamp;
 	detection2D.source_img.height = croppedImage.rows;
 	detection2D.source_img.width = croppedImage.cols;
 	detection2D.source_img.encoding = "bgr8";

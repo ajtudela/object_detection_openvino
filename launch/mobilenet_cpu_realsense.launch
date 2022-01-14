@@ -17,6 +17,7 @@
 
 	<!-- Launch object detection -->
 	<include file="$(find object_detection_openvino)/launch/mobilenet_cpu.launch">
+		<arg name="camera_frame"		value="realsense_link"/>
 		<arg name="color_topic"			value="/realsense/color/image_raw"/>
 		<arg name="points_topic"		value="/realsense/depth/color/points"/>
 	</include>
