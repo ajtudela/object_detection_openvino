@@ -46,10 +46,10 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	// Initialize publishers
 	detectionColorPub_ = imageTransport_.advertise(detectionImageTopic_, 1);
 	detectionInfoPub_ = nodePrivate_.advertise<vision_msgs::VisionInfo>(detectionInfoTopic_, 1);
-	if(!useDepth_){
-		detectionsPub_ = nodePrivate_.advertise<vision_msgs::Detection2DArray>(detectionsTopic_, 1);
-	}else{
-		detectionsPub_ = nodePrivate_.advertise<vision_msgs::Detection3DArray>(detectionsTopic_, 1);
+	detections2DPub_ = nodePrivate_.advertise<vision_msgs::Detection2DArray>(detections2DTopic_, 1);
+
+	if(useDepth_){
+		detections3DPub_ = nodePrivate_.advertise<vision_msgs::Detection3DArray>(detections3DTopic_, 1);
 		markersPub_ = nodePrivate_.advertise<visualization_msgs::MarkerArray>("markers", 1);
 	}
 
@@ -87,7 +87,8 @@ ObjectDetectionVPU::~ObjectDetectionVPU(){
 	nodePrivate_.deleteParam("points_topic");
 	nodePrivate_.deleteParam("detection_image_topic");
 	nodePrivate_.deleteParam("detection_info_topic");
-	nodePrivate_.deleteParam("detections_topic");
+	nodePrivate_.deleteParam("detections2d_topic");
+	nodePrivate_.deleteParam("detections3d_topic");
 
 	nodePrivate_.deleteParam("show_fps");
 	nodePrivate_.deleteParam("output_image");
@@ -110,7 +111,8 @@ void ObjectDetectionVPU::getParams(){
 	nodePrivate_.param<std::string>("points_topic", pointCloudTopic_, "");
 	nodePrivate_.param<std::string>("detection_image_topic", detectionImageTopic_, "image_raw");
 	nodePrivate_.param<std::string>("detection_info_topic", detectionInfoTopic_, "detection_info");
-	nodePrivate_.param<std::string>("detections_topic", detectionsTopic_, "detections");
+	nodePrivate_.param<std::string>("detections2d_topic", detections2DTopic_, "detections2d");
+	nodePrivate_.param<std::string>("detections3d_topic", detections3DTopic_, "detections3d");
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
 	nodePrivate_.param<bool>("output_image", outputImage_, true);
@@ -122,7 +124,7 @@ void ObjectDetectionVPU::colorImageCallback(sensor_msgs::Image::ConstPtr colorIm
 	int detectionId = 0;
 
 	// Note: Only infer object if there's any subscriber
-	if(detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
+	if(detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0) return;
 	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	// Read header
@@ -237,7 +239,7 @@ void ObjectDetectionVPU::colorImageCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Publish detections and markers
 	if(outputImage_) publishImage(currFrame_);
-	detectionsPub_.publish(detections2D);
+	detections2DPub_.publish(detections2D);
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
@@ -251,7 +253,8 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 	int detectionId = 0;
 
 	// Note: Only infer object if there's any subscriber
-	if(detectionColorPub_.getNumSubscribers() == 0 && detectionsPub_.getNumSubscribers() == 0) return;
+	if(detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
+		&& detections3DPub_.getNumSubscribers() == 0 && markersPub_..getNumSubscribers() == 0) return;
 	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
 	// Read header
@@ -354,6 +357,10 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 			colorRGB[1] = getColor(1, offset, COCO_CLASSES);
 			colorRGB[2] = getColor(0, offset, COCO_CLASSES);
 
+			// Create detection2D and push to array
+			vision_msgs::Detection2D detection2D = createDetection2DMsg(object, detections2D.header);
+			detections2D.detections.push_back(detection2D);
+
 			// Create detection3D and push to array
 			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections2D.header);
 			detections3D.detections.push_back(detection3D);
@@ -390,7 +397,8 @@ void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorIm
 
 	// Publish detections and markers
 	if(outputImage_) publishImage(currFrame_);
-	detectionsPub_.publish(detections3D);
+	detections2DPub_.publish(detections2D);
+	detections3DPub_.publish(detections3D);
 	markersPub_.publish(markerArray);
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration

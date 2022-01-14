@@ -61,7 +61,7 @@ class ObjectDetectionVPU{
 		image_transport::SubscriberFilter colorSub_;
 		image_transport::Publisher detectionColorPub_;
 		message_filters::Subscriber<sensor_msgs::PointCloud2> pointsSub_;
-		ros::Publisher detectionInfoPub_, detectionsPub_, markersPub_;
+		ros::Publisher detectionInfoPub_, detections2DPub_, detections3DPub_, markersPub_;
 		tf::TransformListener tfListener_;
 		typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::PointCloud2> SyncPolicyImagePCL;
 		message_filters::Synchronizer<SyncPolicyImagePCL> syncImagePCL_;
@@ -71,7 +71,7 @@ class ObjectDetectionVPU{
 		bool showFPS_, useDepth_, outputImage_;
 		std::string deviceTarget_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
-		std::string colorFrameId_, colorTopic_, pointCloudTopic_, detectionImageTopic_, detectionInfoTopic_, detectionsTopic_;
+		std::string colorFrameId_, colorTopic_, pointCloudTopic_, detectionImageTopic_, detectionInfoTopic_, detections2DTopic_, detections3DTopic_;
 		cv::Mat nextFrame_, currFrame_;
 		std::vector<std::string> labels_;
 

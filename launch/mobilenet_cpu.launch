@@ -8,7 +8,8 @@
 		<param name="points_topic"				value="$(arg points_topic)"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
-		<param name="detections_topic"			value="detections"/>
+		<param name="detections2d_topic"		value="detections2d"/>
+		<param name="detections3d_topic"		value="detections3d"/>
 		<param name="model_thresh"				value="0.4"/>
 		<param name="model_iou_thresh"			value="0.4"/>
 		<param name="model_xml"					value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.xml"/>

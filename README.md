@@ -76,9 +76,9 @@ Perform object detection using OpenVino.
 
 	Color image topic where detection will be performed.
 
-* **`/camera/color/points`** ([sensor_msgs/PointCloud2])
+* **`/camera/color/points`** ([sensor_msgs/PointCloud2]) (Optional)
 
-	Pointcloud topic for extracting 3d coordinates. (Optional)
+	Registered pointcloud topic. Is this topic is not empty, it will extract a 3d bounding box of the objects detected. This pointcloud must be ordered.
 
 #### Published Topics
 
@@ -90,9 +90,13 @@ Perform object detection using OpenVino.
 
 	Provides meta-information about the detection pipeline: method, database location,...
 
-* **`detections`** ([vision_msgs/Detection2DArray] or [vision_msgs/Detection3DArray])
+* **`detections2d`** ([vision_msgs/Detection2DArray] 
 
 	List with the detected objects in the image.
+
+* **`detections3d`** ([vision_msgs/Detection3DArray] 
+
+	List with the detected objects in the image if pointcloud is enabled.
 
 * **`markers`** ([visualization_msgs/MarkerArray])
 

@@ -6,6 +6,7 @@ Changelog for package object_detection_openvino
 ------------------
 * Use pointcloud instead of depth topic to increase accuracy.
 * Split openvino into a different class to improve code readibility.
+* Publish both detections2D and detections3D when using depth instead of detections3D only.
 
 2.0.0 (13-09-2021)
 ------------------
