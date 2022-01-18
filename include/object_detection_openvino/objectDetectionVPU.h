@@ -78,8 +78,8 @@ class ObjectDetectionVPU{
 
 		void getParams();
 		int getColor(int c, int x, int max);
-		void colorImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg);
-		void colorPointCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::PointCloud2::ConstPtr pointsMsg);
+		void colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
+		void colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg);
 		void showHistogram(cv::Mat image, cv::Scalar mean);
 		vision_msgs::Detection2D createDetection2DMsg(DetectionObject object, std_msgs::Header header);
 		vision_msgs::Detection3D createDetection3DMsg(sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, DetectionObject object, std_msgs::Header header);

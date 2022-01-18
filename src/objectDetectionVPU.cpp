@@ -121,7 +121,7 @@ void ObjectDetectionVPU::getParams(){
 }
 
 /* Callback function for color image */
-void ObjectDetectionVPU::colorImageCallback(sensor_msgs::Image::ConstPtr colorImageMsg){
+void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
 	cv_bridge::CvImagePtr colorImageCv;
 	int detectionId = 0;
 
@@ -250,7 +250,7 @@ void ObjectDetectionVPU::colorImageCallback(sensor_msgs::Image::ConstPtr colorIm
 }
 
 /* Callback function for color and pointcloud */
-void ObjectDetectionVPU::colorPointCallback(sensor_msgs::Image::ConstPtr colorImageMsg, sensor_msgs::PointCloud2::ConstPtr pointsMsg){
+void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg){
 	cv_bridge::CvImagePtr colorImageCv;
 	int detectionId = 0;
 
