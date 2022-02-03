@@ -2,6 +2,10 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.0.1 (03-02-2022)
+------------------
+* Add object pose in detection3d.
+
 3.0.0 (14-01-2022)
 ------------------
 * Use pointcloud instead of depth topic to increase accuracy.

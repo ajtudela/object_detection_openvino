@@ -470,12 +470,6 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	vision_msgs::Detection3D detection3D;
 	detection3D.header = header;
 
-	// Class probabilities
-	vision_msgs::ObjectHypothesisWithPose hypo;
-	hypo.id = object.classId;
-	hypo.score = object.confidence;
-	detection3D.results.push_back(hypo);
-
 	// Calculate the center in 3D coordinates
 	int centerX, centerY;
 	centerX = (object.xmax + object.xmin) / 2;
@@ -519,6 +513,15 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	detection3D.bbox.size.x = maxX - minX;
 	detection3D.bbox.size.y = maxY - minY;
 	detection3D.bbox.size.z = maxZ - minZ;
+
+	// Class probabilities
+	// We use the pose as the center of the bounding box
+	// Because this is not a "real" detection 3D
+	vision_msgs::ObjectHypothesisWithPose hypo;
+	hypo.id = object.classId;
+	hypo.score = object.confidence;
+	hypo.pose.pose = detection3D.bbox.center;
+	detection3D.results.push_back(hypo);
 
 	// The 3D data that generated these results:
 	// Cropping the cloud
