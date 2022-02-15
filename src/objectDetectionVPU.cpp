@@ -122,7 +122,6 @@ void ObjectDetectionVPU::getParams(){
 
 /* Callback function for color image */
 void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
-	cv_bridge::CvImagePtr colorImageCv;
 	int detectionId = 0;
 
 	// Note: Only infer object if there's any subscriber
@@ -134,7 +133,7 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Create arrays to publish and format headers
 	vision_msgs::Detection2DArray detections2D;
-	detections2D.header.frame_id = cameraFrameId_;
+	detections2D.header.frame_id = colorFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
 
 	visualization_msgs::MarkerArray markerArray;
@@ -142,6 +141,7 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 	auto wallclock = std::chrono::high_resolution_clock::now();
 
 	// Convert from ROS to CV image
+	cv_bridge::CvImagePtr colorImageCv;
 	try{
 		colorImageCv = cv_bridge::toCvCopy(colorImageMsg, sensor_msgs::image_encodings::BGR8);
 	}catch(cv_bridge::Exception& e){
@@ -233,7 +233,8 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Create and publish info
 	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header = detections2D.header;
+	detectionInfo.header.frame_id = cameraFrameId_;
+	detectionInfo.header.stamp = ros::Time::now();
 	detectionInfo.method = networkType_ + " detection with COCO database";
 	detectionInfo.database_location = labelFileName_;
 	detectionInfo.database_version = 0;
@@ -241,7 +242,7 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Publish detections and markers
 	if(outputImage_) publishImage(currFrame_);
-	detections2DPub_.publish(detections2D);
+	if(!objects.empty()) detections2DPub_.publish(detections2D);
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
@@ -251,11 +252,10 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 /* Callback function for color and pointcloud */
 void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg){
-	cv_bridge::CvImagePtr colorImageCv;
 	int detectionId = 0;
 
 	// Note: Only infer object if there's any subscriber
-	if(detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
+	if (detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
 		&& detections3DPub_.getNumSubscribers() == 0 && markersPub_.getNumSubscribers() == 0) return;
 	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
 
@@ -264,7 +264,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Create arrays to publish and format headers
 	vision_msgs::Detection2DArray detections2D;
-	detections2D.header.frame_id = cameraFrameId_;
+	detections2D.header.frame_id = colorFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
 
 	vision_msgs::Detection3DArray detections3D;
@@ -276,6 +276,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	auto wallclock = std::chrono::high_resolution_clock::now();
 
 	// Convert from ROS to CV image
+	cv_bridge::CvImagePtr colorImageCv;
 	try{
 		colorImageCv = cv_bridge::toCvCopy(colorImageMsg, sensor_msgs::image_encodings::BGR8);
 	}catch(cv_bridge::Exception& e){
@@ -292,7 +293,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 	/* Perform depth analysis */
 	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to pointcloud topic: %s", pointCloudTopic_.c_str());
-	// Transform to color frame
+	// Transform to camera frame
 	sensor_msgs::PointCloud2 localCloudPC2;
 	try{
 		pcl_ros::transformPointCloud(cameraFrameId_, *pointsMsg, localCloudPC2, tfListener_);
@@ -364,12 +365,12 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 			detections2D.detections.push_back(detection2D);
 
 			// Create detection3D and push to array
-			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections2D.header);
+			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections3D.header);
 			detections3D.detections.push_back(detection3D);
 
 			// Create markers
-			visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections2D.header);
-			visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections2D.header);
+			visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections3D.header);
+			visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections3D.header);
 			markerArray.markers.push_back(vizMarker);
 			markerArray.markers.push_back(labelMarker);
 
@@ -391,7 +392,8 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Create and publish info
 	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header = detections2D.header;
+	detectionInfo.header.frame_id = cameraFrameId_;
+	detectionInfo.header.stamp = ros::Time::now();
 	detectionInfo.method = networkType_ + " detection with COCO database";
 	detectionInfo.database_location = labelFileName_;
 	detectionInfo.database_version = 0;
@@ -399,9 +401,11 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 	// Publish detections and markers
 	if(outputImage_) publishImage(currFrame_);
-	detections2DPub_.publish(detections2D);
-	detections3DPub_.publish(detections3D);
-	markersPub_.publish(markerArray);
+	if(!objects.empty()){
+		detections2DPub_.publish(detections2D);
+		detections3DPub_.publish(detections3D);
+		markersPub_.publish(markerArray);
+	}
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
@@ -451,8 +455,7 @@ vision_msgs::Detection2D ObjectDetectionVPU::createDetection2DMsg(DetectionObjec
 	// The 2D data that generated these results
 	cv::Mat croppedImage = currFrame_(cv::Rect(object.xmin, object.ymin, object.xmax - object.xmin, object.ymax - object.ymin));
 
-	detection2D.source_img.header.frame_id = colorFrameId_;
-	detection2D.source_img.header.stamp = header.stamp;
+	detection2D.source_img.header = header;
 	detection2D.source_img.height = croppedImage.rows;
 	detection2D.source_img.width = croppedImage.cols;
 	detection2D.source_img.encoding = "bgr8";
