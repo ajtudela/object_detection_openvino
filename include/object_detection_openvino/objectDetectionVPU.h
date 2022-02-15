@@ -78,6 +78,7 @@ class ObjectDetectionVPU{
 
 		void getParams();
 		int getColor(int c, int x, int max);
+		void connectInfoCallback(const ros::SingleSubscriberPublisher& pub);
 		void colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
 		void colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg);
 		void showHistogram(cv::Mat image, cv::Scalar mean);

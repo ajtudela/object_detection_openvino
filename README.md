@@ -108,6 +108,10 @@ Perform object detection using OpenVino.
 
 	Frame that all measurements are based on.
 
+* **`class_labels`** (string array, default: "-")
+
+	String array with the labels of the classes.
+
 * **`model_thresh`** (float, default: 0.3)
 
 	Detection threshold.

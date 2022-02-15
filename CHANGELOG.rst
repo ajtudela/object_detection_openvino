@@ -2,6 +2,12 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.1.0 (15-02-2022)
+------------------
+* Fix frames of detections2D and detections3D.
+* Only publish if objects are detected.
+* Change database_location in info message from filename to location in param server. Defined as "class_labels".
+
 3.0.1 (03-02-2022)
 ------------------
 * Add object pose in detection3d.

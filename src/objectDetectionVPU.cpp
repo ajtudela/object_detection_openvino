@@ -44,8 +44,8 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	}
 
 	// Initialize publishers
+	detectionInfoPub_ = nodePrivate_.advertise<vision_msgs::VisionInfo>(detectionInfoTopic_, 1, boost::bind(&ObjectDetectionVPU::connectInfoCallback, this, _1));
 	detectionColorPub_ = imageTransport_.advertise(detectionImageTopic_, 1);
-	detectionInfoPub_ = nodePrivate_.advertise<vision_msgs::VisionInfo>(detectionInfoTopic_, 1);
 	detections2DPub_ = nodePrivate_.advertise<vision_msgs::Detection2DArray>(detections2DTopic_, 1);
 
 	if(useDepth_){
@@ -118,6 +118,27 @@ void ObjectDetectionVPU::getParams(){
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
 	nodePrivate_.param<bool>("output_image", outputImage_, true);
+}
+
+/* Callback function when connect to publisher */
+void ObjectDetectionVPU::connectInfoCallback(const ros::SingleSubscriberPublisher& pub){
+	ROS_INFO("[Object detection VPU]: Subscribed to vision info topic");
+
+	// Create the key on the param server
+	std::string classKey = std::string("class_labels");
+	if (!nodePrivate_.hasParam(classKey)){
+		nodePrivate_.setParam(classKey, labels_);
+	}
+
+	// Create and publish info
+	vision_msgs::VisionInfo detectionInfo;
+	detectionInfo.header.frame_id = cameraFrameId_;
+	detectionInfo.header.stamp = ros::Time::now();
+	detectionInfo.method = networkType_ + " detection";
+	detectionInfo.database_version = 0;
+	detectionInfo.database_location = nodePrivate_.getNamespace() + std::string("/") + classKey;
+
+	detectionInfoPub_.publish(detectionInfo);
 }
 
 /* Callback function for color image */
@@ -229,20 +250,11 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 			detectionId++;
 		}
+
+		// Publish detections and markers
+		if(outputImage_) publishImage(currFrame_);
+		if(!objects.empty()) detections2DPub_.publish(detections2D);
 	}
-
-	// Create and publish info
-	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header.frame_id = cameraFrameId_;
-	detectionInfo.header.stamp = ros::Time::now();
-	detectionInfo.method = networkType_ + " detection with COCO database";
-	detectionInfo.database_location = labelFileName_;
-	detectionInfo.database_version = 0;
-	detectionInfoPub_.publish(detectionInfo);
-
-	// Publish detections and markers
-	if(outputImage_) publishImage(currFrame_);
-	if(!objects.empty()) detections2DPub_.publish(detections2D);
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
 	currFrame_ = nextFrame_;
@@ -388,23 +400,14 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 			detectionId++;
 		}
-	}
 
-	// Create and publish info
-	vision_msgs::VisionInfo detectionInfo;
-	detectionInfo.header.frame_id = cameraFrameId_;
-	detectionInfo.header.stamp = ros::Time::now();
-	detectionInfo.method = networkType_ + " detection with COCO database";
-	detectionInfo.database_location = labelFileName_;
-	detectionInfo.database_version = 0;
-	detectionInfoPub_.publish(detectionInfo);
-
-	// Publish detections and markers
-	if(outputImage_) publishImage(currFrame_);
-	if(!objects.empty()){
-		detections2DPub_.publish(detections2D);
-		detections3DPub_.publish(detections3D);
-		markersPub_.publish(markerArray);
+		// Publish detections and markers
+		if(outputImage_) publishImage(currFrame_);
+		if(!objects.empty()){
+			detections2DPub_.publish(detections2D);
+			detections3DPub_.publish(detections3D);
+			markersPub_.publish(markerArray);
+		}
 	}
 
 	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
