@@ -143,123 +143,7 @@ void ObjectDetectionVPU::connectInfoCallback(const ros::SingleSubscriberPublishe
 
 /* Callback function for color image */
 void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
-	int detectionId = 0;
-
-	// Note: Only infer object if there's any subscriber
-	if(detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0) return;
-	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to color image topic: %s", colorTopic_.c_str());
-
-	// Read header
-	colorFrameId_ = colorImageMsg->header.frame_id;
-
-	// Create arrays to publish and format headers
-	vision_msgs::Detection2DArray detections2D;
-	detections2D.header.frame_id = colorFrameId_;
-	detections2D.header.stamp = colorImageMsg->header.stamp;
-
-	visualization_msgs::MarkerArray markerArray;
-
-	auto wallclock = std::chrono::high_resolution_clock::now();
-
-	// Convert from ROS to CV image
-	cv_bridge::CvImagePtr colorImageCv;
-	try{
-		colorImageCv = cv_bridge::toCvCopy(colorImageMsg, sensor_msgs::image_encodings::BGR8);
-	}catch(cv_bridge::Exception& e){
-		ROS_ERROR("[Object detection VPU]: cv_bridge exception: %s", e.what());
-		return;
-	}
-
-	const size_t colorHeight = (size_t) colorImageCv->image.size().height;
-	const size_t colorWidth  = (size_t) colorImageCv->image.size().width;
-
-	// Copy data from image to input blob
-	nextFrame_ = colorImageCv->image.clone();
-	openvino_.frameToNextInfer(nextFrame_, false);
-
-	// Load network
-	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
-	auto t0 = std::chrono::high_resolution_clock::now();
-	openvino_.startNextAsyncInferRequest();
-
-	if(openvino_.isDeviceReady()){
-		// Show FPS
-		if(showFPS_ && outputImage_){
-			auto t1 = std::chrono::high_resolution_clock::now();
-			ms detection = std::chrono::duration_cast<ms>(t1 - t0);
-
-			t0 = std::chrono::high_resolution_clock::now();
-			ms wall = std::chrono::duration_cast<ms>(t0 - wallclock);
-			wallclock = t0;
-
-			std::ostringstream out;
-			cv::putText(currFrame_, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
-			out.str("");
-			out << "Wallclock time ";
-			out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
-			cv::putText(currFrame_, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-
-			out.str("");
-			out << "Detection time  : " << std::fixed << std::setprecision(2) << detection.count()
-				<< " ms ("
-				<< 1000.f / detection.count() << " fps)";
-			cv::putText(currFrame_, out.str(), cv::Point2f(0, 75), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
-		}
-
-		// Get detection objects
-		std::vector<DetectionObject> objects = openvino_.getDetectionObjects(colorHeight, colorWidth, iouThresh_);
-
-		/* Process objects */
-		for(auto &object: objects){
-			// Skip if confidence is less than the threshold
-			if(object.confidence < thresh_) continue;
-
-			auto label = object.classId;
-			float confidence = object.confidence;
-
-			ROS_DEBUG("[Object detection VPU]: %s tag (%.2f%%)", this->labels_[label].c_str(), confidence*100);
-
-			// Improve bounding box
-			object.xmin = object.xmin < 0 ? 0 : object.xmin;
-			object.ymin = object.ymin < 0 ? 0 : object.ymin;
-			object.xmax = object.xmax > colorWidth ? colorWidth : object.xmax;
-			object.ymax = object.ymax > colorHeight ? colorHeight : object.ymax;
-
-			// Color of the class
-			int offset = object.classId * 123457 % COCO_CLASSES;
-			float colorRGB[3];
-			colorRGB[0] = getColor(2, offset, COCO_CLASSES);
-			colorRGB[1] = getColor(1, offset, COCO_CLASSES);
-			colorRGB[2] = getColor(0, offset, COCO_CLASSES);
-
-			// Create detection2D and push to array
-			vision_msgs::Detection2D detection2D = createDetection2DMsg(object, detections2D.header);
-			detections2D.detections.push_back(detection2D);
-
-			/* Image */
-			if(outputImage_){
-				// Text label
-				std::ostringstream conf;
-				conf << ":" << std::fixed << std::setprecision(3) << confidence;
-				std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
-				// Rectangles for class
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
-				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
-			}
-
-			detectionId++;
-		}
-
-		// Publish detections and markers
-		if(outputImage_) publishImage(currFrame_);
-		if(!objects.empty()) detections2DPub_.publish(detections2D);
-	}
-
-	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
-	currFrame_ = nextFrame_;
-	nextFrame_ = cv::Mat();
-	openvino_.swapAsyncInferRequest();
+	colorPointCallback(colorImageMsg, nullptr);
 }
 
 /* Callback function for color and pointcloud */
@@ -275,6 +159,8 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	colorFrameId_ = colorImageMsg->header.frame_id;
 
 	// Create arrays to publish and format headers
+	visualization_msgs::MarkerArray markerArray;
+
 	vision_msgs::Detection2DArray detections2D;
 	detections2D.header.frame_id = colorFrameId_;
 	detections2D.header.stamp = colorImageMsg->header.stamp;
@@ -283,7 +169,6 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	detections3D.header.frame_id = cameraFrameId_;
 	detections3D.header.stamp = colorImageMsg->header.stamp;
 
-	visualization_msgs::MarkerArray markerArray;
 
 	auto wallclock = std::chrono::high_resolution_clock::now();
 
@@ -303,19 +188,21 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	nextFrame_ = colorImageCv->image.clone();
 	openvino_.frameToNextInfer(nextFrame_, false);
 
-	/* Perform depth analysis */
-	ROS_INFO_ONCE("[Object detection VPU]: Subscribed to pointcloud topic: %s", pointCloudTopic_.c_str());
-	// Transform to camera frame
+	// Tranform the pointcloud
 	sensor_msgs::PointCloud2 localCloudPC2;
-	try{
-		pcl_ros::transformPointCloud(cameraFrameId_, *pointsMsg, localCloudPC2, tfListener_);
-	}catch(tf::TransformException& ex){
-		ROS_ERROR_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
-		return;
-	}
-	// Convert to PCL
 	pcloud::Ptr localCloudPCLPtr(new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::fromROSMsg(localCloudPC2, *localCloudPCLPtr);
+	if(useDepth_){
+		ROS_INFO_ONCE("[Object detection VPU]: Subscribed to pointcloud topic: %s", pointCloudTopic_.c_str());
+		// Transform to camera frame
+		try{
+			pcl_ros::transformPointCloud(cameraFrameId_, *pointsMsg, localCloudPC2, tfListener_);
+		}catch(tf::TransformException& ex){
+			ROS_ERROR_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
+			return;
+		}
+		// Convert to PCL
+		pcl::fromROSMsg(localCloudPC2, *localCloudPCLPtr);
+	}
 
 	// Load network
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
@@ -376,15 +263,17 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 			vision_msgs::Detection2D detection2D = createDetection2DMsg(object, detections2D.header);
 			detections2D.detections.push_back(detection2D);
 
-			// Create detection3D and push to array
-			vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections3D.header);
-			detections3D.detections.push_back(detection3D);
+			if(useDepth_){
+				// Create detection3D and push to array
+				vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections3D.header);
+				detections3D.detections.push_back(detection3D);
 
-			// Create markers
-			visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections3D.header);
-			visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections3D.header);
-			markerArray.markers.push_back(vizMarker);
-			markerArray.markers.push_back(labelMarker);
+				// Create markers
+				visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections3D.header);
+				visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections3D.header);
+				markerArray.markers.push_back(vizMarker);
+				markerArray.markers.push_back(labelMarker);
+			}
 
 			/* Image */
 			if(outputImage_){
@@ -405,8 +294,10 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 		if(outputImage_) publishImage(currFrame_);
 		if(!objects.empty()){
 			detections2DPub_.publish(detections2D);
-			detections3DPub_.publish(detections3D);
-			markersPub_.publish(markerArray);
+			if(useDepth_){
+				detections3DPub_.publish(detections3D);
+				markersPub_.publish(markerArray);
+			}
 		}
 	}
 
