@@ -2,6 +2,12 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.0 (23-02-2022)
+------------------
+* Fix for empty objects in messages when NaN values in center position.
+* Remove output_image parameter.
+* Add filter to realsense launch files.
+
 3.1.0 (15-02-2022)
 ------------------
 * Fix frames of detections2D and detections3D.
