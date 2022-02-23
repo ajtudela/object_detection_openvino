@@ -92,7 +92,6 @@ ObjectDetectionVPU::~ObjectDetectionVPU(){
 	nodePrivate_.deleteParam("detections3d_topic");
 
 	nodePrivate_.deleteParam("show_fps");
-	nodePrivate_.deleteParam("output_image");
 }
 
 /* Update parameters of the node */
@@ -117,7 +116,6 @@ void ObjectDetectionVPU::getParams(){
 	nodePrivate_.param<std::string>("detections3d_topic", detections3DTopic_, "detections3d");
 
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
-	nodePrivate_.param<bool>("output_image", outputImage_, true);
 }
 
 /* Callback function when connect to publisher */
@@ -211,7 +209,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 	if(openvino_.isDeviceReady()){
 		// Show FPS
-		if(showFPS_ && outputImage_){
+		if(showFPS_){
 			auto t1 = std::chrono::high_resolution_clock::now();
 			ms detection = std::chrono::duration_cast<ms>(t1 - t0);
 
@@ -283,22 +281,20 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 			}
 
 			/* Image */
-			if(outputImage_){
-				// Text label
-				std::ostringstream conf;
-				conf << ":" << std::fixed << std::setprecision(3) << confidence;
-				std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
-				// Rectangles for class
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
-				cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
-				cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
-			}
+			// Text label
+			std::ostringstream conf;
+			conf << ":" << std::fixed << std::setprecision(3) << confidence;
+			std::string labelText = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
+			// Rectangles for class
+			cv::rectangle(currFrame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), cv::FILLED, cv::LINE_AA);
+			cv::putText(currFrame_, labelText, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
+			cv::rectangle(currFrame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(colorRGB[2], colorRGB[1], colorRGB[0]), 4, cv::LINE_AA);
 
 			detectionId++;
 		}
 
 		// Publish detections and markers
-		if(outputImage_) publishImage(currFrame_);
+		publishImage(currFrame_);
 		if(!objects.empty()){
 			detections2DPub_.publish(detections2D);
 			if(useDepth_){

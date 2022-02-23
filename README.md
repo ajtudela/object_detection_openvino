@@ -144,10 +144,6 @@ Perform object detection using OpenVino.
 
 	Option to show the fps in the image.
 
-* **`output_image`** (bool, default: false)
-
-	Output image of the detected objects.
-
 ## Nodelet
 
 ### object_detection_openvino_nodelet

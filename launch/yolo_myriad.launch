@@ -20,7 +20,6 @@
 		<param name="model_type"				value="YOLO"/>
 		<param name="device_target"				value="MYRIAD"/>
 		<param name="show_fps"					value="false"/>
-		<param name="output_image"				value="true"/>
 	</node>
 </launch>
 

@@ -68,7 +68,7 @@ class ObjectDetectionVPU{
 
 		Openvino openvino_;
 		float thresh_, iouThresh_;
-		bool showFPS_, useDepth_, outputImage_;
+		bool showFPS_, useDepth_;
 		std::string deviceTarget_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
 		std::string colorFrameId_, cameraFrameId_;
