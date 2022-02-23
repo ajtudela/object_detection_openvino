@@ -260,19 +260,26 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 			colorRGB[2] = getColor(0, offset, COCO_CLASSES);
 
 			// Create detection2D and push to array
-			vision_msgs::Detection2D detection2D = createDetection2DMsg(object, detections2D.header);
-			detections2D.detections.push_back(detection2D);
+			vision_msgs::Detection2D detection2D;
+			if (createDetection2DMsg(object, detections2D.header, detection2D)){
+				detections2D.detections.push_back(detection2D);
+			}
 
 			if(useDepth_){
 				// Create detection3D and push to array
-				vision_msgs::Detection3D detection3D = createDetection3DMsg(localCloudPC2, localCloudPCLPtr, object, detections3D.header);
-				detections3D.detections.push_back(detection3D);
+				vision_msgs::Detection3D detection3D;
 
-				// Create markers
-				visualization_msgs::Marker vizMarker = createBBox3dMarker(detectionId, detection3D.bbox, colorRGB, detections3D.header);
-				visualization_msgs::Marker labelMarker = createLabel3dMarker(detectionId*10, this->labels_[label].c_str(), detection3D.bbox.center, colorRGB, detections3D.header);
-				markerArray.markers.push_back(vizMarker);
-				markerArray.markers.push_back(labelMarker);
+				if (createDetection3DMsg(object, detections3D.header, localCloudPC2, localCloudPCLPtr, detection3D)){
+					// Create markers
+					visualization_msgs::Marker vizMarker, labelMarker;
+
+					createBBox3DMarker(detectionId, detections3D.header, colorRGB, detection3D.bbox, vizMarker);
+					createLabel3DMarker(detectionId*10, detections3D.header, colorRGB, detection3D.bbox, labels_[label], labelMarker);
+
+					detections3D.detections.push_back(detection3D);
+					markerArray.markers.push_back(vizMarker);
+					markerArray.markers.push_back(labelMarker);
+				}
 			}
 
 			/* Image */
@@ -330,8 +337,7 @@ void ObjectDetectionVPU::showHistogram(cv::Mat image, cv::Scalar mean){
 }
 
 /* Create detection 2D message */
-vision_msgs::Detection2D ObjectDetectionVPU::createDetection2DMsg(DetectionObject object, std_msgs::Header header){
-	vision_msgs::Detection2D detection2D;
+bool ObjectDetectionVPU::createDetection2DMsg(DetectionObject object, std_msgs::Header header, vision_msgs::Detection2D& detection2D){
 	detection2D.header = header;
 
 	// Class probabilities
@@ -359,14 +365,11 @@ vision_msgs::Detection2D ObjectDetectionVPU::createDetection2DMsg(DetectionObjec
 	detection2D.source_img.data.resize(size);
 	memcpy((char*)(&detection2D.source_img.data[0]), croppedImage.data, size);
 
-	return detection2D;
+	return true;
 }
 
 /* Create detection 3D message */
-vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, DetectionObject object, std_msgs::Header header){
-	vision_msgs::Detection3D detection3D;
-	detection3D.header = header;
-
+bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::Header header, sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, vision_msgs::Detection3D& detection3D){
 	// Calculate the center in 3D coordinates
 	int centerX, centerY;
 	centerX = (object.xmax + object.xmin) / 2;
@@ -375,7 +378,7 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	int pclIndex = centerX + (centerY * cloudPC2.width);
 	pcl::PointXYZRGB centerPoint = cloudPCL->at(pclIndex);
 
-	if(std::isnan(centerPoint.x)) return detection3D;
+	if(std::isnan(centerPoint.x)) return false;
 
 	// Calculate the bounding box
 	float maxX, minX, maxY, minY, maxZ, minZ;
@@ -398,6 +401,9 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 			minZ = std::min(point.z, minZ);
 		}
 	}
+
+	// Header
+	detection3D.header = header;
 
 	// 3D bounding box surrounding the object
 	detection3D.bbox.center.position.x = centerPoint.x;
@@ -433,12 +439,11 @@ vision_msgs::Detection3D ObjectDetectionVPU::createDetection3DMsg(sensor_msgs::P
 	pcl::toROSMsg(*croppedCloudPCLPtr, croppedCloudPC2);
 	detection3D.source_cloud = croppedCloudPC2;
 
-	return detection3D;
+	return true;
 }
 
 /* Create 3d Bounding Box for the object */
-visualization_msgs::Marker ObjectDetectionVPU::createBBox3dMarker(int id, vision_msgs::BoundingBox3D bbox, float colorRGB[3], std_msgs::Header header){
-	visualization_msgs::Marker marker;
+bool ObjectDetectionVPU::createBBox3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, visualization_msgs::Marker& marker){
 	marker.header = header;
 	marker.ns = "boundingBox3d";
 	marker.id = id;
@@ -452,12 +457,11 @@ visualization_msgs::Marker ObjectDetectionVPU::createBBox3dMarker(int id, vision
 	marker.color.b = colorRGB[2] / 255.0;
 	marker.color.a = 0.2f;
 
-	return marker;
+	return true;
 }
 
 /* Create 3d label for the object */
-visualization_msgs::Marker ObjectDetectionVPU::createLabel3dMarker(int id, std::string label, geometry_msgs::Pose pose, float colorRGB[3], std_msgs::Header header){
-	visualization_msgs::Marker marker;
+bool ObjectDetectionVPU::createLabel3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, std::string label, visualization_msgs::Marker& marker){
 	marker.header = header;
 	marker.ns = "label3d";
 	marker.id = id;
@@ -465,9 +469,9 @@ visualization_msgs::Marker ObjectDetectionVPU::createLabel3dMarker(int id, std::
 	marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
 	marker.action = visualization_msgs::Marker::ADD;
 	marker.lifetime = ros::Duration(0.15);
-	marker.pose.position.x = pose.position.x;
-	marker.pose.position.y = pose.position.y - 0.3;
-	marker.pose.position.z = pose.position.z + 0.05;
+	marker.pose.position.x = bbox.center.position.x;
+	marker.pose.position.y = bbox.center.position.y;
+	marker.pose.position.z = bbox.center.position.z + bbox.size.z / 2.0 + 0.05;
 	marker.pose.orientation.x = 0.0;
 	marker.pose.orientation.y = 0.0;
 	marker.pose.orientation.z = 0.0;
@@ -478,7 +482,7 @@ visualization_msgs::Marker ObjectDetectionVPU::createLabel3dMarker(int id, std::
 	marker.color.b = colorRGB[2] / 255.0;
 	marker.color.a = 0.8f;
 
-	return marker;
+	return true;
 }
 
 /* Publish image */
