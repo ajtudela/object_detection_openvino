@@ -20,11 +20,24 @@
 		<arg name="clip_distance" 		value="4"/>
 	</include>
 
+	<!-- Run a passthrough filter to clean NaNs -->
+	<node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough vision_manager" output="screen">
+		<remap from="~input" to="/realsense/depth/color/points" />
+		<remap from="~output" to="/realsense/depth/color/points_filtered" />
+		<rosparam>
+           keep_organized: true
+           filter_field_name: z
+           filter_limit_min: 0.10
+           filter_limit_max: 10.0
+           filter_limit_negative: False 
+        </rosparam>
+	</node>
+
 	<!-- Launch object detection -->
 	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet vision_manager" output="screen" >
 		<param name="camera_frame"				value="realsense_link"/>
 		<param name="color_topic"				value="/realsense/color/image_raw"/>
-		<param name="points_topic"				value="/realsense/depth/color/points"/>
+		<param name="points_topic"				value="/realsense/depth/color/points_filtered"/>
 		<param name="detection_image_topic"		value="image_raw"/>
 		<param name="detection_info_topic"		value="detection_info"/>
 		<param name="detections2d_topic"		value="detections2d"/>
