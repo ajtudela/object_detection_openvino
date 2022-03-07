@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<arg name="manager" 				default="vision_manager" />
+	<arg name="camera_frame" 			default="camera_link"/>
+	<arg name="color_topic" 			default="/camera/color/image_raw"/>
+	<arg name="points_topic" 			default=""/>
+
+	<!-- Launch object detection -->
+	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet $(arg manager)" output="screen" >
+		<param name="camera_frame"				value="$(arg camera_frame)"/>
+		<param name="color_topic"				value="$(arg color_topic)"/>
+		<param name="points_topic"				value="$(arg points_topic)"/>
+		<param name="detection_image_topic"		value="image_raw"/>
+		<param name="detection_info_topic"		value="detection_info"/>
+		<param name="detections2d_topic"		value="detections2d"/>
+		<param name="detections3d_topic"		value="detections3d"/>
+		<param name="model_thresh"				value="0.4"/>
+		<param name="model_iou_thresh"			value="0.4"/>
+		<param name="model_xml"					value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.xml"/>
+		<param name="model_bin"					value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.bin"/>
+		<param name="model_labels"				value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.labels"/>
+		<param name="model_type"				value="SSD"/>
+		<param name="device_target"				value="MYRIAD"/>
+		<param name="show_fps"					value="false"/>
+	</node>
+</launch>
+
+

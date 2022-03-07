@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
+	<arg name="manager" default="vision_manager" />
+
 	<!-- Launch nodelet -->
 	<node pkg="nodelet" type="nodelet" name="vision_manager"  args="manager" output="screen" />
 
@@ -21,7 +23,7 @@
 	</include>
 
 	<!-- Run a passthrough filter to clean NaNs -->
-	<node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough vision_manager" output="screen">
+	<node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough $(arg manager)" output="screen">
 		<remap from="~input" to="/realsense/depth/color/points" />
 		<remap from="~output" to="/realsense/depth/color/points_filtered" />
 		<rosparam>
@@ -34,7 +36,7 @@
 	</node>
 
 	<!-- Launch object detection -->
-	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet vision_manager" output="screen" >
+	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet $(arg manager)" output="screen" >
 		<param name="camera_frame"				value="realsense_link"/>
 		<param name="color_topic"				value="/realsense/color/image_raw"/>
 		<param name="points_topic"				value="/realsense/depth/color/points_filtered"/>
