@@ -24,14 +24,13 @@
 #include "object_detection_openvino/objectDetectionVPU.h"
 
 /* Initialize the subscribers, the publishers and the inference engine */
-ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), imageTransport_(nodePrivate_), 
-																										syncImagePCL_(SyncPolicyImagePCL(5), colorSub_, pointsSub_){
+ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), 
+											imageTransport_(nodePrivate_), syncImagePCL_(SyncPolicyImagePCL(5), colorSub_, pointsSub_){
 	// Initialize ROS parameters
 	getParams();
 
 	// Initialize values for depth analysis
-	if(pointCloudTopic_.empty()) useDepth_ = false;
-	else useDepth_ = true;
+	useDepth_ = pointCloudTopic_.empty() ? false : true;
 
 	// Initialize subscribers, create sync policy and synchronizer
 	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
@@ -146,8 +145,6 @@ void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& 
 
 /* Callback function for color and pointcloud */
 void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg){
-	int detectionId = 0;
-
 	// Note: Only infer object if there's any subscriber
 	if (detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
 		&& detections3DPub_.getNumSubscribers() == 0 && markersPub_.getNumSubscribers() == 0) return;
@@ -166,7 +163,6 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	vision_msgs::Detection3DArray detections3D;
 	detections3D.header.frame_id = cameraFrameId_;
 	detections3D.header.stamp = colorImageMsg->header.stamp;
-
 
 	auto wallclock = std::chrono::high_resolution_clock::now();
 
@@ -206,16 +202,19 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
 	auto t0 = std::chrono::high_resolution_clock::now();
 	openvino_.startNextAsyncInferRequest();
+	auto t1 = std::chrono::high_resolution_clock::now();
 
 	if(openvino_.isDeviceReady()){
 		// Show FPS
 		if(showFPS_){
-			auto t1 = std::chrono::high_resolution_clock::now();
+			t1 = std::chrono::high_resolution_clock::now();
 			ms detection = std::chrono::duration_cast<ms>(t1 - t0);
 
 			t0 = std::chrono::high_resolution_clock::now();
 			ms wall = std::chrono::duration_cast<ms>(t0 - wallclock);
 			wallclock = t0;
+
+			t0 = std::chrono::high_resolution_clock::now();
 
 			std::ostringstream out;
 			cv::putText(currFrame_, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
@@ -234,6 +233,8 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 		// Get detection objects
 		std::vector<DetectionObject> objects = openvino_.getDetectionObjects(colorHeight, colorWidth, iouThresh_);
 
+		int detectionId = 0;
+
 		/* Process objects */
 		for(auto &object: objects){
 			// Skip if confidence is less than the threshold
@@ -242,7 +243,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 			auto label = object.classId;
 			float confidence = object.confidence;
 
-			ROS_DEBUG("[Object detection VPU]: %s tag (%.2f%%)", this->labels_[label].c_str(), confidence*100);
+			ROS_DEBUG("[Object detection VPU]: %s tag (%.2f%%)", labels_[label].c_str(), confidence*100);
 
 			// Improve bounding box
 			object.xmin = object.xmin < 0 ? 0 : object.xmin;
@@ -365,7 +366,7 @@ bool ObjectDetectionVPU::createDetection2DMsg(DetectionObject object, std_msgs::
 }
 
 /* Create detection 3D message */
-bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::Header header, sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, vision_msgs::Detection3D& detection3D){
+bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::Header header, const sensor_msgs::PointCloud2& cloudPC2, pcloud::ConstPtr cloudPCL, vision_msgs::Detection3D& detection3D){
 	// Calculate the center in 3D coordinates
 	int centerX, centerY;
 	centerX = (object.xmax + object.xmin) / 2;
@@ -414,12 +415,13 @@ bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::
 	detection3D.bbox.size.z = maxZ - minZ;
 
 	// Class probabilities
-	// We use the pose as the center of the bounding box
+	// We use the pose as the min Z of the bounding box
 	// Because this is not a "real" detection 3D
 	vision_msgs::ObjectHypothesisWithPose hypo;
 	hypo.id = object.classId;
 	hypo.score = object.confidence;
 	hypo.pose.pose = detection3D.bbox.center;
+	hypo.pose.pose.position.z -= detection3D.bbox.size.z / 2.0;
 	detection3D.results.push_back(hypo);
 
 	// The 3D data that generated these results:
@@ -465,13 +467,8 @@ bool ObjectDetectionVPU::createLabel3DMarker(int id, std_msgs::Header header, fl
 	marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
 	marker.action = visualization_msgs::Marker::ADD;
 	marker.lifetime = ros::Duration(0.15);
-	marker.pose.position.x = bbox.center.position.x;
-	marker.pose.position.y = bbox.center.position.y;
-	marker.pose.position.z = bbox.center.position.z + bbox.size.z / 2.0 + 0.05;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = 0.0;
-	marker.pose.orientation.w = 1.0;
+	marker.pose = bbox.center;
+	marker.pose.position.z += bbox.size.z / 2.0 + 0.05;
 	marker.scale.z = 0.3;
 	marker.color.r = colorRGB[0] / 255.0;
 	marker.color.g = colorRGB[1] / 255.0;
