@@ -2,6 +2,22 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.1 (08-03-2022)
+------------------
+* Optimizations, change pose to bottom of bbox
+
+3.2.0 (23-02-2022)
+------------------
+* Fix for empty objects in messages when NaN values in center position.
+* Remove output_image parameter.
+* Add filter to realsense launch files.
+
+3.1.0 (15-02-2022)
+------------------
+* Fix frames of detections2D and detections3D.
+* Only publish if objects are detected.
+* Change database_location in info message from filename to location in param server. Defined as "class_labels".
+
 3.0.1 (03-02-2022)
 ------------------
 * Add object pose in detection3d.

@@ -68,7 +68,7 @@ class ObjectDetectionVPU{
 
 		Openvino openvino_;
 		float thresh_, iouThresh_;
-		bool showFPS_, useDepth_, outputImage_;
+		bool showFPS_, useDepth_;
 		std::string deviceTarget_, networkType_;
 		std::string modelFileName_, binFileName_, labelFileName_;
 		std::string colorFrameId_, cameraFrameId_;
@@ -78,13 +78,14 @@ class ObjectDetectionVPU{
 
 		void getParams();
 		int getColor(int c, int x, int max);
+		void connectInfoCallback(const ros::SingleSubscriberPublisher& pub);
 		void colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg);
 		void colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg);
 		void showHistogram(cv::Mat image, cv::Scalar mean);
-		vision_msgs::Detection2D createDetection2DMsg(DetectionObject object, std_msgs::Header header);
-		vision_msgs::Detection3D createDetection3DMsg(sensor_msgs::PointCloud2 cloudPC2, pcloud::ConstPtr cloudPCL, DetectionObject object, std_msgs::Header header);
-		visualization_msgs::Marker createBBox3dMarker(int id, vision_msgs::BoundingBox3D bbox, float colorRGB[3], std_msgs::Header header);
-		visualization_msgs::Marker createLabel3dMarker(int id, std::string label, geometry_msgs::Pose pose, float colorRGB[3], std_msgs::Header header);
+		bool createDetection2DMsg(DetectionObject object, std_msgs::Header header, vision_msgs::Detection2D& detection2D);
+		bool createDetection3DMsg(DetectionObject object, std_msgs::Header header, const sensor_msgs::PointCloud2& cloudPC2, pcloud::ConstPtr cloudPCL, vision_msgs::Detection3D& detection3D);
+		bool createBBox3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, visualization_msgs::Marker& marker);
+		bool createLabel3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, std::string label, visualization_msgs::Marker& marker);
 		void publishImage(cv::Mat image);
 };
 #endif

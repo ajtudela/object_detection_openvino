@@ -108,6 +108,10 @@ Perform object detection using OpenVino.
 
 	Frame that all measurements are based on.
 
+* **`class_labels`** (string array, default: "-")
+
+	String array with the labels of the classes.
+
 * **`model_thresh`** (float, default: 0.3)
 
 	Detection threshold.
@@ -139,10 +143,6 @@ Perform object detection using OpenVino.
 * **`show_fps`** (bool, default: false)
 
 	Option to show the fps in the image.
-
-* **`output_image`** (bool, default: false)
-
-	Output image of the detected objects.
 
 ## Nodelet
 

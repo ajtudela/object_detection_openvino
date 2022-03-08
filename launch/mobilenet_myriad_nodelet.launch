@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <launch>
-	<arg name="camera_frame" 				default="camera_link"/>
-	<arg name="color_topic" 				default="/camera/color/image_raw"/>
-	<arg name="points_topic" 				default=""/>
+	<arg name="manager" 				default="vision_manager" />
+	<arg name="camera_frame" 			default="camera_link"/>
+	<arg name="color_topic" 			default="/camera/color/image_raw"/>
+	<arg name="points_topic" 			default=""/>
 
-	<node pkg="object_detection_openvino" type="object_detection_openvino_node" name="object_detection" output="screen">
+	<!-- Launch object detection -->
+	<node pkg="nodelet" type="nodelet" name="object_detection" args="load object_detection_openvino/ObjectDetectionVPUNodelet $(arg manager)" output="screen" >
 		<param name="camera_frame"				value="$(arg camera_frame)"/>
 		<param name="color_topic"				value="$(arg color_topic)"/>
 		<param name="points_topic"				value="$(arg points_topic)"/>
@@ -18,8 +20,9 @@
 		<param name="model_bin"					value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.bin"/>
 		<param name="model_labels"				value="$(find object_detection_openvino)/models/mobilenet-ssd/FP16/mobilenet-ssd.labels"/>
 		<param name="model_type"				value="SSD"/>
-		<param name="device_target"				value="CPU"/>
+		<param name="device_target"				value="MYRIAD"/>
 		<param name="show_fps"					value="false"/>
 	</node>
 </launch>
+
 
