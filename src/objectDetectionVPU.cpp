@@ -23,7 +23,6 @@
 
 #include "object_detection_openvino/objectDetectionVPU.h"
 
-/* Initialize the subscribers, the publishers and the inference engine */
 ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& node_private): node_(node), nodePrivate_(node_private), 
 											imageTransport_(nodePrivate_), syncImagePCL_(SyncPolicyImagePCL(5), colorSub_, pointsSub_){
 	// Initialize ROS parameters
@@ -34,7 +33,7 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 
 	// Initialize subscribers, create sync policy and synchronizer
 	colorSub_.subscribe(imageTransport_, colorTopic_, 10);
-	if(!useDepth_){
+	if (!useDepth_){
 		colorSub_.registerCallback(boost::bind(&ObjectDetectionVPU::colorImageCallback, this,_1));
 	}else{
 		pointsSub_.subscribe(node_, pointCloudTopic_, 10);
@@ -47,7 +46,7 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	detectionColorPub_ = imageTransport_.advertise(detectionImageTopic_, 1);
 	detections2DPub_ = nodePrivate_.advertise<vision_msgs::Detection2DArray>(detections2DTopic_, 1);
 
-	if(useDepth_){
+	if (useDepth_){
 		detections3DPub_ = nodePrivate_.advertise<vision_msgs::Detection3DArray>(detections3DTopic_, 1);
 		markersPub_ = nodePrivate_.advertise<visualization_msgs::MarkerArray>("markers", 1);
 	}
@@ -71,7 +70,6 @@ ObjectDetectionVPU::ObjectDetectionVPU(ros::NodeHandle& node, ros::NodeHandle& n
 	openvino_.createAsyncInferRequest();
 }
 
-/* Delete all parameteres */
 ObjectDetectionVPU::~ObjectDetectionVPU(){
 	nodePrivate_.deleteParam("model_thresh");
 	nodePrivate_.deleteParam("model_iou_thresh");
@@ -93,7 +91,6 @@ ObjectDetectionVPU::~ObjectDetectionVPU(){
 	nodePrivate_.deleteParam("show_fps");
 }
 
-/* Update parameters of the node */
 void ObjectDetectionVPU::getParams(){
 	ROS_INFO("[Object detection VPU]: Reading ROS parameters");
 
@@ -117,7 +114,6 @@ void ObjectDetectionVPU::getParams(){
 	nodePrivate_.param<bool>("show_fps", showFPS_, false);
 }
 
-/* Callback function when connect to publisher */
 void ObjectDetectionVPU::connectInfoCallback(const ros::SingleSubscriberPublisher& pub){
 	ROS_INFO("[Object detection VPU]: Subscribed to vision info topic");
 
@@ -138,12 +134,10 @@ void ObjectDetectionVPU::connectInfoCallback(const ros::SingleSubscriberPublishe
 	detectionInfoPub_.publish(detectionInfo);
 }
 
-/* Callback function for color image */
 void ObjectDetectionVPU::colorImageCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg){
 	colorPointCallback(colorImageMsg, nullptr);
 }
 
-/* Callback function for color and pointcloud */
 void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& colorImageMsg, const sensor_msgs::PointCloud2::ConstPtr& pointsMsg){
 	// Note: Only infer object if there's any subscriber
 	if (detectionColorPub_.getNumSubscribers() == 0 && detections2DPub_.getNumSubscribers() == 0
@@ -170,7 +164,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	cv_bridge::CvImagePtr colorImageCv;
 	try{
 		colorImageCv = cv_bridge::toCvCopy(colorImageMsg, sensor_msgs::image_encodings::BGR8);
-	}catch(cv_bridge::Exception& e){
+	}catch (cv_bridge::Exception& e){
 		ROS_ERROR("[Object detection VPU]: cv_bridge exception: %s", e.what());
 		return;
 	}
@@ -185,12 +179,12 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	// Tranform the pointcloud
 	sensor_msgs::PointCloud2 localCloudPC2;
 	pcloud::Ptr localCloudPCLPtr(new pcl::PointCloud<pcl::PointXYZRGB>);
-	if(useDepth_){
+	if (useDepth_){
 		ROS_INFO_ONCE("[Object detection VPU]: Subscribed to pointcloud topic: %s", pointCloudTopic_.c_str());
 		// Transform to camera frame
 		try{
 			pcl_ros::transformPointCloud(cameraFrameId_, *pointsMsg, localCloudPC2, tfListener_);
-		}catch(tf::TransformException& ex){
+		}catch (tf::TransformException& ex){
 			ROS_ERROR_STREAM("[Object detection VPU]: Transform error of sensor data: " << ex.what() << ", quitting callback");
 			return;
 		}
@@ -204,9 +198,9 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	openvino_.startNextAsyncInferRequest();
 	auto t1 = std::chrono::high_resolution_clock::now();
 
-	if(openvino_.isDeviceReady()){
+	if (openvino_.isDeviceReady()){
 		// Show FPS
-		if(showFPS_){
+		if (showFPS_){
 			t1 = std::chrono::high_resolution_clock::now();
 			ms detection = std::chrono::duration_cast<ms>(t1 - t0);
 
@@ -231,14 +225,14 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 		}
 
 		// Get detection objects
-		std::vector<DetectionObject> objects = openvino_.getDetectionObjects(colorHeight, colorWidth, iouThresh_);
+		std::vector<DetectionObject> objects = openvino_.getDetectionObjects(colorHeight, colorWidth, thresh_, iouThresh_);
 
 		int detectionId = 0;
 
 		/* Process objects */
-		for(auto &object: objects){
+		for (auto &object: objects){
 			// Skip if confidence is less than the threshold
-			if(object.confidence < thresh_) continue;
+			if (object.confidence < thresh_) continue;
 
 			auto label = object.classId;
 			float confidence = object.confidence;
@@ -264,7 +258,7 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 				detections2D.detections.push_back(detection2D);
 			}
 
-			if(useDepth_){
+			if (useDepth_){
 				// Create detection3D and push to array
 				vision_msgs::Detection3D detection3D;
 
@@ -296,9 +290,9 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 
 		// Publish detections and markers
 		publishImage(currFrame_);
-		if(!objects.empty()){
+		if (!objects.empty()){
 			detections2DPub_.publish(detections2D);
-			if(useDepth_){
+			if (useDepth_){
 				detections3DPub_.publish(detections3D);
 				markersPub_.publish(markerArray);
 			}
@@ -311,7 +305,6 @@ void ObjectDetectionVPU::colorPointCallback(const sensor_msgs::Image::ConstPtr& 
 	openvino_.swapAsyncInferRequest();
 }
 
-/* Show histogram of the image */
 void ObjectDetectionVPU::showHistogram(cv::Mat image, cv::Scalar mean){
 	int histSize = 256;
 	float range[] = { 0, histSize }; //the upper boundary is exclusive
@@ -333,7 +326,6 @@ void ObjectDetectionVPU::showHistogram(cv::Mat image, cv::Scalar mean){
 	cv::waitKey(10);
 }
 
-/* Create detection 2D message */
 bool ObjectDetectionVPU::createDetection2DMsg(DetectionObject object, std_msgs::Header header, vision_msgs::Detection2D& detection2D){
 	detection2D.header = header;
 
@@ -365,7 +357,6 @@ bool ObjectDetectionVPU::createDetection2DMsg(DetectionObject object, std_msgs::
 	return true;
 }
 
-/* Create detection 3D message */
 bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::Header header, const sensor_msgs::PointCloud2& cloudPC2, pcloud::ConstPtr cloudPCL, vision_msgs::Detection3D& detection3D){
 	// Calculate the center in 3D coordinates
 	int centerX, centerY;
@@ -375,7 +366,7 @@ bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::
 	int pclIndex = centerX + (centerY * cloudPC2.width);
 	pcl::PointXYZRGB centerPoint = cloudPCL->at(pclIndex);
 
-	if(std::isnan(centerPoint.x)) return false;
+	if (std::isnan(centerPoint.x)) return false;
 
 	// Calculate the bounding box
 	float maxX, minX, maxY, minY, maxZ, minZ;
@@ -440,7 +431,6 @@ bool ObjectDetectionVPU::createDetection3DMsg(DetectionObject object, std_msgs::
 	return true;
 }
 
-/* Create 3d Bounding Box for the object */
 bool ObjectDetectionVPU::createBBox3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, visualization_msgs::Marker& marker){
 	marker.header = header;
 	marker.ns = "boundingBox3d";
@@ -458,7 +448,6 @@ bool ObjectDetectionVPU::createBBox3DMarker(int id, std_msgs::Header header, flo
 	return true;
 }
 
-/* Create 3d label for the object */
 bool ObjectDetectionVPU::createLabel3DMarker(int id, std_msgs::Header header, float colorRGB[3], vision_msgs::BoundingBox3D bbox, std::string label, visualization_msgs::Marker& marker){
 	marker.header = header;
 	marker.ns = "label3d";
@@ -478,7 +467,6 @@ bool ObjectDetectionVPU::createLabel3DMarker(int id, std_msgs::Header header, fl
 	return true;
 }
 
-/* Publish image */
 void ObjectDetectionVPU::publishImage(cv::Mat image){
 	cv_bridge::CvImage outputImageMsg;
 	outputImageMsg.header.stamp = ros::Time::now();
@@ -489,7 +477,6 @@ void ObjectDetectionVPU::publishImage(cv::Mat image){
 	detectionColorPub_.publish(outputImageMsg.toImageMsg());
 }
 
-/* Get color of the class */
 int ObjectDetectionVPU::getColor(int c, int x, int max){
 	float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
 

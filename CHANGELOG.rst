@@ -2,9 +2,14 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.2 (26-05-2022)
+------------------
+* Improve documentation.
+* Fix threshold value not passing to openvino.
+
 3.2.1 (08-03-2022)
 ------------------
-* Optimizations, change pose to bottom of bbox
+* Optimizations, change pose to bottom of bbox.
 
 3.2.0 (23-02-2022)
 ------------------
