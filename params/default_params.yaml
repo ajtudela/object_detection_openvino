@@ -1,0 +1,20 @@
+object_detection:
+  ros__parameters:
+    show_fps: false
+    # Topics parametes
+    camera_frame: camera_link
+    color_topic: camera/color/image_raw
+    points_topic: camera/depth/color/points
+    detection_image_topic: image_raw
+    detection_info_topic: detection_info
+    detections_2d_topic: detections_2d
+    detections_3d_topic: detections_3d
+    # Thresholds parameters
+    model_thresh: 0.4
+    model_iou_thresh: 0. 4
+    # Model parameters
+    model_xml: model.xml
+    model_bin: model.bin
+    model_labels: model.labels
+    model_type: network_type
+    device_target: CPU

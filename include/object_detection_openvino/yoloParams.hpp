@@ -1,16 +1,16 @@
 /*
  * YOLO PARAMS CLASS
  *
- * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
+ * Copyright (c) 2020-2022 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
  * This file is part of object_detection_openvino project.
  * 
  * All rights reserved.
  *
  */
- 
-#ifndef YOLO_PARAMS_H
-#define YOLO_PARAMS_H
+
+#ifndef OBJECT_DETECTION_OPENVINO__YOLO_PARAMS_HPP_
+#define OBJECT_DETECTION_OPENVINO__YOLO_PARAMS_HPP_
 
 // OpenVINO
 #include <inference_engine.hpp>
@@ -57,30 +57,6 @@ class YoloParams{
 		}
 
 		/**
-		 * @brief Overloaded constructor, provided for convenience.
-		 * 
-		 * @param layer The layer of the neural network.
-		 */
-		YoloParams(InferenceEngine::CNNLayer::Ptr layer){
-			if(layer->type != "RegionYolo")
-				throw std::runtime_error("Invalid output type: " + layer->type + ". RegionYolo expected");
-
-			num = layer->GetParamAsInt("num");
-			coords = layer->GetParamAsInt("coords");
-			classes = layer->GetParamAsInt("classes");
-
-			try{
-				anchors = layer->GetParamAsFloats("anchors");
-			}catch (...){}
-			try{
-				auto mask = layer->GetParamAsInts("mask");
-				num = mask.size();
-
-				computeAnchors(mask);
-			}catch (...){}
-		}
-
-		/**
 		 * @brief Copy constructor.
 		 * 
 		 * @param yoloParam Other yolo param.
@@ -109,4 +85,4 @@ class YoloParams{
 		}
 };
 
-#endif
+#endif // OBJECT_DETECTION_OPENVINO__YOLO_PARAMS_HPP_

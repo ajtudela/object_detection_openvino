@@ -1,5 +1,0 @@
-<library path="lib/libobject_detection_openvino_nodelet">
-	<class name="object_detection_openvino/ObjectDetectionVPUNodelet" type="object_detection_openvino::ObjectDetectionVPUNodelet" base_class_type="nodelet::Nodelet">
-		<description>Object detection using Intel OpenVino</description>
-	</class>
-</library>

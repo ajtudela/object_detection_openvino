@@ -1,7 +1,7 @@
 /*
  * DETECTION OBJECT STRUCT
  *
- * Copyright (c) 2020-2021 Alberto José Tudela Roldán <ajtudela@gmail.com>
+ * Copyright (c) 2020-2022 Alberto José Tudela Roldán <ajtudela@gmail.com>
  * 
  * This file is part of object_detection_openvino project.
  * 
@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef DETECTION_OBJECT_H
-#define DETECTION_OBJECT_H
+#ifndef OBJECT_DETECTION_OPENVINO__DETECTION_OBJECT_HPP_
+#define OBJECT_DETECTION_OPENVINO__DETECTION_OBJECT_HPP_
 
 #include <string>
 
@@ -118,12 +118,7 @@ struct DetectionObject{
 	}
 
 	/**
-	 * @brief Relational operator of the confidence of the detected object.
-	 * 
-	 * @param s2 Object to compare to. 
-	 * @return True if the left object has lower confidence than the right one. False, otherwise.
-	 */
-	bool operator<(const DetectionObject &s2) const {
+	 * @brief Relational operator of OBJECT_DETECTION_OPENVINO__YOLO_PARAMS_HPP_bject &s2) const {
 		return this->confidence < s2.confidence;
 	}
 
@@ -138,4 +133,4 @@ struct DetectionObject{
 	}
 };
 
-#endif
+#endif // OBJECT_DETECTION_OPENVINO__DETECTION_OBJECT_HPP_
