@@ -44,9 +44,6 @@
 // OpenCV
 #include <cv_bridge/cv_bridge.h>
 
-/// The number of the labels in the COCO database.
-#define COCO_CLASSES		80
-
 /// Typedef for easier readability.
 typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 

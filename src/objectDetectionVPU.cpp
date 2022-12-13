@@ -289,11 +289,11 @@ void ObjectDetectionVPU::color_point_callback(
 			object.ymax = object.ymax > color_height ? color_height : object.ymax;
 
 			// Color of the class
-			int offset = object.classId * 123457 % COCO_CLASSES;
+			int offset = object.classId * 123457 % labels_.size();
 			float color_rgb[3];
-			color_rgb[0] = get_color(2, offset, COCO_CLASSES);
-			color_rgb[1] = get_color(1, offset, COCO_CLASSES);
-			color_rgb[2] = get_color(0, offset, COCO_CLASSES);
+			color_rgb[0] = get_color(2, offset, labels_.size());
+			color_rgb[1] = get_color(1, offset, labels_.size());
+			color_rgb[2] = get_color(0, offset, labels_.size());
 
 			// Create detection2D and push to array
 			vision_msgs::msg::Detection2D detection_2d;
