@@ -94,40 +94,55 @@ void ObjectDetectionVPU::get_params(){
 	// Model parameters
 	this->declare_parameter("model_thresh", 0.3);
 	this->get_parameter("model_thresh", thresh_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_thresh is set to: [%f]", thresh_);
 	this->declare_parameter("model_iou_thresh", 0.4);
 	this->get_parameter("model_iou_thresh", iou_thresh_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_iou_thresh is set to: [%f]", iou_thresh_);
 
 	// Network parameters
 	this->declare_parameter("model_xml", "");
 	this->get_parameter("model_xml", model_filename_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_xml is set to: [%s]", model_filename_.c_str());
 	this->declare_parameter("model_bin", "");
 	this->get_parameter("model_bin", bin_filename_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_bin is set to: [%s]", bin_filename_.c_str());
 	this->declare_parameter("model_labels", "");
 	this->get_parameter("model_labels", label_filename_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_labels is set to: [%s]", label_filename_.c_str());
 	this->declare_parameter("model_type", "");
 	this->get_parameter("model_type", network_type_);
+	RCLCPP_INFO(this->get_logger(), "The parameter model_type is set to: [%s]", network_type_.c_str());
 	this->declare_parameter("device_target", "CPU");
 	this->get_parameter("device_target", device_target_);
+	RCLCPP_INFO(this->get_logger(), "The parameter device_target is set to: [%s]", device_target_.c_str());
 
 	this->declare_parameter("camera_frame", "camera_link");
 	this->get_parameter("camera_frame", camera_frame_);
+	RCLCPP_INFO(this->get_logger(), "The parameter camera_frame is set to: [%s]", camera_frame_.c_str());
 
 	// Topics
 	this->declare_parameter("color_topic", "/camera/color/image_raw");
 	this->get_parameter("color_topic", color_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter color_topic is set to: [%s]", color_topic_.c_str());
 	this->declare_parameter("points_topic", "");
 	this->get_parameter("points_topic", pointcloud_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter points_topic is set to: [%s]", pointcloud_topic_.c_str());
 	this->declare_parameter("detection_info_topic", "/detection_info");
 	this->get_parameter("detection_info_topic", detection_info_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter detection_info_topic is set to: [%s]", detection_info_topic_.c_str());
 	this->declare_parameter("detection_image_topic", "/detection_image");
 	this->get_parameter("detection_image_topic", detection_image_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter detection_image_topic is set to: [%s]", detection_image_topic_.c_str());
 	this->declare_parameter("detections_2d_topic", "/detections_2d");
 	this->get_parameter("detections_2d_topic", detections_2d_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter detections_2d_topic is set to: [%s]", detections_2d_topic_.c_str());
 	this->declare_parameter("detections_3d_topic", "/detections_3d");
 	this->get_parameter("detections_3d_topic", detections_3d_topic_);
+	RCLCPP_INFO(this->get_logger(), "The parameter detections_3d_topic is set to: [%s]", detections_3d_topic_.c_str());
 
 	this->declare_parameter("show_fps", false);
 	this->get_parameter("show_fps", show_fps_);
+	RCLCPP_INFO(this->get_logger(), "The parameter show_fps is set to: [%s]", show_fps_ ? "true" : "false");
 }
 
 // TODO(ros2) Implement when SubscriberStatusCallback is available

@@ -11,7 +11,7 @@ object_detection:
     detections_3d_topic: detections_3d
     # Thresholds parameters
     model_thresh: 0.4
-    model_iou_thresh: 0. 4
+    model_iou_thresh: 0.4
     # Model parameters
     model_xml: model.xml
     model_bin: model.bin

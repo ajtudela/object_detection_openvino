@@ -16,7 +16,7 @@
 int main(int argc, char** argv){
 	rclcpp::init(argc, argv);
 
-	auto node = std::make_shared<ObjectDetectionVPU>("object_detection_vpu");
+	auto node = std::make_shared<ObjectDetectionVPU>("object_detection");
 	rclcpp::spin(node);
 	rclcpp::shutdown();
 	return 0;

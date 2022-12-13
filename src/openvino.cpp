@@ -201,10 +201,10 @@ std::vector<DetectionObject> Openvino::get_detection_objects(size_t height,
 
 	// Filtering overlapping boxes
 	std::sort(objects.begin(), objects.end(), std::greater<DetectionObject>());
-	for (int i = 0; i < objects.size(); ++i){
+	for (unsigned int i = 0; i < objects.size(); ++i){
 		if (objects[i].confidence == 0)
 			continue;
-		for (int j = i + 1; j < objects.size(); ++j) {
+		for (unsigned int j = i + 1; j < objects.size(); ++j) {
 			if (intersection_over_union(objects[i], objects[j]) >= iou_threshold) {
 				objects[j].confidence = 0;
 			}
