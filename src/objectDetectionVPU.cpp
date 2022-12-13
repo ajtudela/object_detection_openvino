@@ -83,8 +83,8 @@ ObjectDetectionVPU::ObjectDetectionVPU(std::string node_name) :
 	// Load model to the device 
 	openvino_.load_model_to_device(device_target_);
 
-	// Create async inference request
-	openvino_.create_async_infer_request();
+	// Create inference request
+	openvino_.create_infer_request();
 }
 
 ObjectDetectionVPU::~ObjectDetectionVPU(){
@@ -212,8 +212,8 @@ void ObjectDetectionVPU::color_point_callback(
 	const size_t color_width  = (size_t) color_image_cv->image.size().width;
 
 	// Copy data from image to input blob
-	next_frame_ = color_image_cv->image.clone();
-	openvino_.frame_to_next_infer(next_frame_, false);
+	frame_ = color_image_cv->image.clone();
+	openvino_.frame_to_infer(frame_, false);
 
 	// Transform the pointcloud
 	sensor_msgs::msg::PointCloud2 local_cloud_pc2;
@@ -238,7 +238,7 @@ void ObjectDetectionVPU::color_point_callback(
 	// Load network
 	// In the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
 	auto t0 = std::chrono::high_resolution_clock::now();
-	openvino_.start_next_async_infer_request();
+	openvino_.start_infer_request();
 	auto t1 = std::chrono::high_resolution_clock::now();
 
 	if (openvino_.is_device_ready()){
@@ -254,17 +254,17 @@ void ObjectDetectionVPU::color_point_callback(
 			t0 = std::chrono::high_resolution_clock::now();
 
 			std::ostringstream out;
-			cv::putText(current_frame_, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
+			cv::putText(frame_, out.str(), cv::Point2f(0, 25), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
 			out.str("");
 			out << "Wallclock time ";
 			out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
-			cv::putText(current_frame_, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+			cv::putText(frame_, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 
 			out.str("");
 			out << "Detection time  : " << std::fixed << std::setprecision(2) << detection.count()
 				<< " ms ("
 				<< 1000.f / detection.count() << " fps)";
-			cv::putText(current_frame_, out.str(), cv::Point2f(0, 75), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
+			cv::putText(frame_, out.str(), cv::Point2f(0, 75), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(255, 0, 0), 1, cv::LINE_AA);
 		}
 
 		// Get detection objects
@@ -324,15 +324,15 @@ void ObjectDetectionVPU::color_point_callback(
 			conf << ":" << std::fixed << std::setprecision(3) << confidence;
 			std::string label_text = (label < this->labels_.size() ? this->labels_[label] : std::string("label #") + std::to_string(label)) + conf.str();
 			// Rectangles for class
-			cv::rectangle(current_frame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(color_rgb[2], color_rgb[1], color_rgb[0]), cv::FILLED, cv::LINE_AA);
-			cv::putText(current_frame_, label_text, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
-			cv::rectangle(current_frame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(color_rgb[2], color_rgb[1], color_rgb[0]), 4, cv::LINE_AA);
+			cv::rectangle(frame_, cv::Point2f(object.xmin-1, object.ymin), cv::Point2f(object.xmin + 180, object.ymin - 22), cv::Scalar(color_rgb[2], color_rgb[1], color_rgb[0]), cv::FILLED, cv::LINE_AA);
+			cv::putText(frame_, label_text, cv::Point2f(object.xmin, object.ymin - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0, 0, 0), 1.5, cv::LINE_AA);
+			cv::rectangle(frame_, cv::Point2f(object.xmin, object.ymin), cv::Point2f(object.xmax, object.ymax), cv::Scalar(color_rgb[2], color_rgb[1], color_rgb[0]), 4, cv::LINE_AA);
 
 			detection_id++;
 		}
 
 		// Publish detections and markers
-		publish_image(current_frame_);
+		publish_image(frame_);
 		if (!objects.empty()){
 			detections_2d_pub_->publish(detections_2d);
 			if (use_depth_){
@@ -341,11 +341,6 @@ void ObjectDetectionVPU::color_point_callback(
 			}
 		}
 	}
-
-	// In the truly Async mode we swap the NEXT and CURRENT requests for the next iteration
-	current_frame_ = next_frame_;
-	next_frame_ = cv::Mat();
-	openvino_.swap_async_infer_request();
 }
 
 void ObjectDetectionVPU::show_histogram(cv::Mat image, cv::Scalar mean){

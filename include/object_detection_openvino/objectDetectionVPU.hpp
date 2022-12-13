@@ -157,11 +157,8 @@ class ObjectDetectionVPU : public rclcpp::Node{
 		/// Topic of the detected objects in 3 dimensions.
 		std::string detections_3d_topic_;
 
-		/// Next image to be processed.
-		cv::Mat next_frame_;
-
-		/// Curent image to be processed.
-		cv::Mat current_frame_;
+		/// Image to be processed.
+		cv::Mat frame_;
 
 		/// Class labels of the neural network.
 		std::vector<std::string> labels_;

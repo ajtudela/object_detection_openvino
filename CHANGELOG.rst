@@ -2,9 +2,10 @@
 Changelog for package object_detection_openvino
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-4.0.0 (12-12-2022)
+4.0.0 (13-12-2022)
 ------------------
 * First ROS2 (Galactic) version.
+* Update to OpenVino 2021.4.
 
 3.2.2 (26-05-2022)
 ------------------

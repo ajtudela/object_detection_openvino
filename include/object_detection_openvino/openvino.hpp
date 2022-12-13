@@ -79,22 +79,16 @@ class Openvino{
 		void load_model_to_device(std::string device);
 
 		/**
-		 * @brief Create an asynchronous inference request.
+		 * @brief Create an inference request.
 		 * 
 		 */
-		void create_async_infer_request();
+		void create_infer_request();
 
 		/**
-		 * @brief Start the asynchronous inference request in the next frame.
+		 * @brief Start an inference request.
 		 * 
 		 */
-		void start_next_async_infer_request();
-
-		/**
-		 * @brief Swap the asynchronous inference request between the current frame and the next one.
-		 * 
-		 */
-		void swap_async_infer_request();
+		void start_infer_request();
 
 		/**
 		 * @brief Check if the device is ready.
@@ -126,12 +120,12 @@ class Openvino{
 														float iou_threshold);
 
 		/**
-		 * @brief Convert the frame to an asynchronous inference request.
+		 * @brief Convert the frame to an inference request.
 		 * 
 		 * @param frame The frame to be converted.
 		 * @param auto_resize Value to change the size of the frame.
 		 */
-		void frame_to_next_infer(const cv::Mat &frame, bool auto_resize = false);
+		void frame_to_infer(const cv::Mat &frame, bool auto_resize = false);
 
 	private:
 
@@ -153,11 +147,8 @@ class Openvino{
 		/// Interface of an executable network.
 		InferenceEngine::ExecutableNetwork inf_network_;
 
-		/// Interface of asynchronous current infer request.
-		InferenceEngine::InferRequest::Ptr async_infer_request_current_;
-
-		/// Interface of asynchronous next infer request.
-		InferenceEngine::InferRequest::Ptr async_infer_request_next_;
+		/// Interface of inference request.
+		InferenceEngine::InferRequest infer_request_;
 
 		/// A collection that contains string as key, and OutputInfo smart pointer as value.
 		InferenceEngine::OutputsDataMap output_info_;
@@ -204,7 +195,7 @@ class Openvino{
 		 * @param auto_resize Value to change the size of the frame.
 		 */
 		void frame_to_blob(const cv::Mat &frame, 
-							InferenceEngine::InferRequest::Ptr &infer_request, 
+							InferenceEngine::InferRequest &infer_request, 
 							const std::string &input_name, bool auto_resize = false);
 
 		/**

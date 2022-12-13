@@ -43,9 +43,12 @@ void Openvino::set_target_device(std::string device){
 		 * by mkldnn, but they can be useful for inferring custom topologies.
 		**/
 		core_.AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>(), "CPU");
-	}else if (device.find("GPU") != std::string::npos){
-		core_.SetConfig({{PluginConfigParams::KEY_DUMP_KERNELS, PluginConfigParams::YES}}, "GPU");
+	}else if (device.find("GPU") != std::string::npos || 
+			device.find("MYRIAD") != std::string::npos || 
+			device.find("HDDL") != std::string::npos){
+		core_.SetConfig({{PluginConfigParams::KEY_DUMP_KERNELS, PluginConfigParams::YES}}, device);
 	}
+	RCLCPP_INFO(rclcpp::get_logger(node_name_), "Custom extension loaded for %s", device.c_str());
 #endif
 }
 
@@ -125,20 +128,15 @@ void Openvino::configure_network(std::string network_type){
 				"Only accepts networks with three (YOLO) or two (tiny-YOLO) outputs");
 			rclcpp::shutdown();
 		}
-
-		for (auto &output : output_info_){
-			output.second->setPrecision(InferenceEngine::Precision::FP32);
-			output.second->setLayout(InferenceEngine::Layout::NCHW);
-		}
 	}else if (network_type_ == "SSD"){
 		if (output_info_.size() != 1){
 			throw std::logic_error("Openvino: Only accepts networks with one output");
 		}
+	}
 
-		for (auto &output : output_info_){
-			output.second->setPrecision(InferenceEngine::Precision::FP32);
-			output.second->setLayout(InferenceEngine::Layout::NCHW);
-		}
+	for (auto &output : output_info_){
+		output.second->setPrecision(InferenceEngine::Precision::FP32);
+		output.second->setLayout(InferenceEngine::Layout::NCHW);
 	}
 }
 
@@ -147,22 +145,17 @@ void Openvino::load_model_to_device(std::string device){
 	inf_network_ = core_.LoadNetwork(cnn_network_, device);
 }
 
-void Openvino::create_async_infer_request(){
-	RCLCPP_INFO(rclcpp::get_logger(node_name_), "Create infer request");
-	async_infer_request_current_ = inf_network_.CreateInferRequestPtr();
-	async_infer_request_next_ = inf_network_.CreateInferRequestPtr();
+void Openvino::create_infer_request(){
+	RCLCPP_INFO(rclcpp::get_logger(node_name_), "Create inference request");
+	infer_request_ = inf_network_.CreateInferRequest();
 }
 
-void Openvino::start_next_async_infer_request(){
-	async_infer_request_next_->StartAsync();
-}
-
-void Openvino::swap_async_infer_request(){
-	async_infer_request_current_.swap(async_infer_request_next_);
+void Openvino::start_infer_request(){
+	infer_request_.Infer();
 }
 
 bool Openvino::is_device_ready(){
-	return InferenceEngine::OK == async_infer_request_current_->Wait(InferenceEngine::IInferRequest::WaitMode::RESULT_READY);
+	return InferenceEngine::OK == infer_request_.Wait(InferenceEngine::IInferRequest::WaitMode::RESULT_READY);
 }
 
 std::vector<std::string> Openvino::get_labels(){
@@ -182,7 +175,7 @@ std::vector<DetectionObject> Openvino::get_detection_objects(size_t height,
 	std::vector<DetectionObject> objects;
 	for (auto &output: output_info_){
 		auto output_name = output.first;
-		InferenceEngine::Blob::Ptr blob = async_infer_request_current_->GetBlob(output_name);
+		InferenceEngine::Blob::Ptr blob = infer_request_.GetBlob(output_name);
 
 		if (network_type_ == "YOLO"){
 			parse_yolov3_output(cnn_network_, 
@@ -214,8 +207,8 @@ std::vector<DetectionObject> Openvino::get_detection_objects(size_t height,
 	return objects;
 }
 
-void Openvino::frame_to_next_infer(const cv::Mat &frame, bool auto_resize){
-	frame_to_blob(frame, async_infer_request_next_, input_name_, auto_resize);
+void Openvino::frame_to_infer(const cv::Mat &frame, bool auto_resize){
+	frame_to_blob(frame, infer_request_, input_name_, auto_resize);
 }
 
 int Openvino::entry_index(int side, int lcoords, int lclasses, int location, int entry) {
@@ -243,14 +236,14 @@ double Openvino::intersection_over_union(const DetectionObject &box_1, const Det
 }
 
 void Openvino::frame_to_blob(const cv::Mat &frame, 
-							InferenceEngine::InferRequest::Ptr &infer_request, 
+							InferenceEngine::InferRequest &infer_request, 
 							const std::string &input_name, bool auto_resize){
 	if (auto_resize){
 		// Just set input blob containing read image. Resize and layout conversion will be done automatically 
-		infer_request->SetBlob(input_name, wrapMat2Blob(frame));
+		infer_request_.SetBlob(input_name, wrapMat2Blob(frame));
 	}else{
 		// Resize and copy data from the image to the input blob
-		InferenceEngine::Blob::Ptr frame_blob = infer_request->GetBlob(input_name);
+		InferenceEngine::Blob::Ptr frame_blob = infer_request.GetBlob(input_name);
 		matU8ToBlob<uint8_t>(frame, frame_blob);
 	}
 }
