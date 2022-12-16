@@ -7,6 +7,7 @@ Changelog for package object_detection_openvino
 * First ROS2 (Galactic) version.
 * Update to OpenVino 2021.4.
 * Remove hardcoded COCO labels size.
+* Update README.
 
 3.2.2 (26-05-2022)
 ------------------

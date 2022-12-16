@@ -1,16 +1,16 @@
 # object_detection_openvino
 
-![ROS](https://img.shields.io/badge/ros-melodic-blue?style=for-the-badge&logo=ros&logoColor=white)
+![ROS2](https://img.shields.io/badge/ros2-galactic-purple?logo=ros&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/opencv-%23white.svg?style=for-the-badge&logo=opencv&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache%202-blue?style=for-the-badge)
 
 ## Overview
 
-An implementation of YOLO and Mobilenet-SSD object detection with a ROS interface and enhanced processor utilization using OpenVINO model optimization tools. It can be use with any Myriad X, i.e.: Intel Neural Compute Stick 2.
+An implementation of YOLO and Mobilenet-SSD object detection with a [ROS2] interface and enhanced processor utilization using OpenVINO model optimization tools. It can be use with any Myriad X, i.e.: Intel Neural Compute Stick 2.
 This package is designed on async api of [Intel OpenVINO](https://software.intel.com/en-us/openvino-toolkit) and allows an easy setup for **object detection**.<br><br>
-If you provide a pointcloud image (from an Intel RealSense Camera, for example) you can obtain 3d boxes and markers in [RViz].
+If you provide a pointcloud image (from an Intel RealSense Camera, for example) you can obtain 3d boxes and markers in [Rviz2].
 
-**Keywords:** ROS, OpenVino, RealSense, OpenCV, object_detection
+**Keywords:** ROS, ROS2, OpenVino, RealSense, OpenCV, object_detection
 
 ### License
 
@@ -18,7 +18,7 @@ The source code is released under a [Apache license 2.0](LICENSE).
 
 **Author: Alberto Tudela<br />**
 
-The object_detection_openvino package has been tested under [ROS] Melodic on [Ubuntu] 18.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The object_detection_openvino package has been tested under [Rviz2] Galactic on [Ubuntu] 20.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 ## Installation
 
@@ -27,33 +27,25 @@ The object_detection_openvino package has been tested under [ROS] Melodic on [Ub
 #### Dependencies
 
 - [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
-- [Intel OpenVINO 2020.3.355](https://software.intel.com/en-us/openvino-toolkit) (toolkit for deep learning),
+- [Intel OpenVINO 2021.4.1](https://software.intel.com/en-us/openvino-toolkit) (toolkit for deep learning),
 - [OpenCV 3](https://opencv.org/) (Computer Vision library),
 - [Boost](https://www.boost.org/) (C++ source libraries)
-
-	sudo rosdep install --from-paths src
 
 #### Building
 
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package using
 
-	cd catkin_workspace/src
+	cd colcon_workspace/src
 	git clone https://gitlab.com/ajtudela/object_detection_openvino.git
 	cd ../
-	rosdep install --from-paths . --ignore-src
-	catkin_make
+	rosdep install -i --from-path src --rosdistro galactic -y
+	colcon build --symlink-install
 
 ## Usage
 
-Run the main node using YOLO with:
+Run the main node with:
 
-	roslaunch object_detection_openvino yolo_cpu.launch
-
-Or if you can launch the same node with the Intel RealSense camera:
-
-	roslaunch object_detection_openvino yolo_cpu_realsense.launch
-
-Optionally, there're other configurations in the launch folder.
+	ros2 launch object_detection_openvino default.launch.py
 
 ## Download weights file
 The weights file is very large and needs to be downloaded separately.
@@ -144,18 +136,14 @@ Perform object detection using OpenVino.
 
 	Option to show the fps in the image.
 
-## Nodelet
-
-### object_detection_openvino_nodelet
-
-Same funtionality as the node mention above but converted as a nodelet for a vision pipeline. A nodelet manager is required.
+## Future work
+- [ ] Convert nodes to LifeCycleNodes.
 
 [Ubuntu]: https://ubuntu.com/
-[ROS]: http://www.ros.org
-[Rviz]: http://wiki.ros.org/rviz
+[ROS2]: https://docs.ros.org/en/galactic/
+[Rviz2]: https://github.com/ros2/rviz
 [sensor_msgs/Image]: http://docs.ros.org/api/sensor_msgs/html/msg/Image.html
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
-[sensor_msgs/CameraInfo]: http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html
 [vision_msgs/VisionInfo]: http://docs.ros.org/api/vision_msgs/html/msg/VisionInfo.html
 [vision_msgs/Detection2DArray]: http://docs.ros.org/api/vision_msgs/html/msg/Detection2DArray.html
 [vision_msgs/Detection3DArray]: http://docs.ros.org/api/vision_msgs/html/msg/Detection3DArray.html
