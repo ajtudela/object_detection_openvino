@@ -1,8 +1,8 @@
 # object_detection_openvino
 
 ![ROS2](https://img.shields.io/badge/ros2-galactic-purple?logo=ros&logoColor=white)
-![OpenCV](https://img.shields.io/badge/opencv-%23white.svg?style=for-the-badge&logo=opencv&logoColor=white)
-![License](https://img.shields.io/badge/license-Apache%202-blue?style=for-the-badge)
+![OpenCV](https://img.shields.io/badge/opencv-%23white.svg?logo=opencv&logoColor=white)
+![License](https://img.shields.io/badge/license-Apache%202-blue)
 
 ## Overview
 
