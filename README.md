@@ -36,7 +36,7 @@ The object_detection_openvino package has been tested under [Rviz2] Galactic on 
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package using
 
 	cd colcon_workspace/src
-	git clone https://gitlab.com/ajtudela/object_detection_openvino.git
+	git clone https://github.com/ajtudela/object_detection_openvino.git
 	cd ../
 	rosdep install -i --from-path src --rosdistro galactic -y
 	colcon build --symlink-install
